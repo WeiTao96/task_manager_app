@@ -5,6 +5,9 @@ class Task {
   bool isCompleted;
   DateTime dueDate;
   String category;
+  int xp; // 经验值
+  int gold; // 金币
+  String? professionId; // 关联的职业ID
 
   Task({
     required this.id,
@@ -13,6 +16,9 @@ class Task {
     this.isCompleted = false,
     required this.dueDate,
     required this.category,
+    this.xp = 0,
+    this.gold = 0,
+    this.professionId,
   });
 
   // 转换为Map，用于持久化存储
@@ -24,6 +30,9 @@ class Task {
       'isCompleted': isCompleted ? 1 : 0,
       'dueDate': dueDate.toIso8601String(),
       'category': category,
+      'xp': xp,
+      'gold': gold,
+      'professionId': professionId,
     };
   }
 
@@ -36,6 +45,9 @@ class Task {
       isCompleted: map['isCompleted'] == 1,
       dueDate: DateTime.parse(map['dueDate']),
       category: map['category'],
+      xp: map.containsKey('xp') && map['xp'] != null ? (map['xp'] as int) : 0,
+      gold: map.containsKey('gold') && map['gold'] != null ? (map['gold'] as int) : 0,
+      professionId: map['professionId'],
     );
   }
 }

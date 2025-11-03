@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
+import '../providers/profession_provider.dart';
 import '../models/task.dart';
+import '../models/profession.dart';
 
 class TaskFormScreen extends StatefulWidget {
   static const routeName = '/add_task';
@@ -15,9 +17,12 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _xpController = TextEditingController(text: '10');
+  final _goldController = TextEditingController(text: '5');
   
   DateTime _dueDate = DateTime.now().add(Duration(days: 1));
   String _selectedCategory = '工作';
+  String? _selectedProfessionId; // 选中的职业ID
   final List<String> _categories = ['工作', '个人', '学习', '其他'];
   
   Task? _editingTask;
@@ -26,6 +31,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 加载职业列表
+      Provider.of<ProfessionProvider>(context, listen: false).loadProfessions();
+      
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args != null && args is Task) {
         setState(() {
@@ -34,6 +42,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           _descriptionController.text = args.description;
           _dueDate = args.dueDate;
           _selectedCategory = args.category;
+          _xpController.text = args.xp.toString();
+          _goldController.text = args.gold.toString();
+          _selectedProfessionId = args.professionId;
         });
       }
     });
@@ -43,6 +54,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _xpController.dispose();
+    _goldController.dispose();
     super.dispose();
   }
   
@@ -124,6 +137,95 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   });
                 },
               ),
+              SizedBox(height: 16),
+              
+              // XP 和 Gold 输入（水平布局）
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _xpController,
+                      decoration: InputDecoration(
+                        labelText: '经验值 (XP)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.star, color: Colors.blue),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '请输入经验值';
+                        }
+                        if (int.tryParse(value) == null || int.parse(value) < 0) {
+                          return '请输入有效的数字';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _goldController,
+                      decoration: InputDecoration(
+                        labelText: '金币 (Gold)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.monetization_on, color: Colors.amber),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '请输入金币数';
+                        }
+                        if (int.tryParse(value) == null || int.parse(value) < 0) {
+                          return '请输入有效的数字';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              
+              // 职业选择
+              Consumer<ProfessionProvider>(
+                builder: (context, professionProvider, child) {
+                  final professions = professionProvider.professions;
+                  
+                  return DropdownButtonFormField<String?>(
+                    value: _selectedProfessionId,
+                    decoration: InputDecoration(
+                      labelText: '关联职业（可选）',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.work_outline),
+                    ),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('无关联职业'),
+                      ),
+                      ...professions.map((profession) {
+                        return DropdownMenuItem<String?>(
+                          value: profession.id,
+                          child: Row(
+                            children: [
+                              Text(profession.icon, style: TextStyle(fontSize: 18)),
+                              SizedBox(width: 8),
+                              Expanded(child: Text(profession.name)),
+                              Text('Lv.${profession.level}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedProfessionId = newValue;
+                      });
+                    },
+                  );
+                },
+              ),
               SizedBox(height: 32),
               
               // 保存按钮
@@ -165,6 +267,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   void _saveTask() {
     if (_formKey.currentState!.validate()) {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      final xp = int.parse(_xpController.text);
+      final gold = int.parse(_goldController.text);
       
       if (_editingTask == null) {
         // 添加新任务
@@ -174,6 +278,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           description: _descriptionController.text,
           dueDate: _dueDate,
           category: _selectedCategory,
+          xp: xp,
+          gold: gold,
+          professionId: _selectedProfessionId,
         );
         taskProvider.addTask(newTask);
       } else {
@@ -182,6 +289,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
         _editingTask!.description = _descriptionController.text;
         _editingTask!.dueDate = _dueDate;
         _editingTask!.category = _selectedCategory;
+        _editingTask!.xp = xp;
+        _editingTask!.gold = gold;
+        _editingTask!.professionId = _selectedProfessionId;
         taskProvider.updateTask(_editingTask!);
       }
       

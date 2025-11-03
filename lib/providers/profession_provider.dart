@@ -23,30 +23,48 @@ class ProfessionProvider with ChangeNotifier {
 
   // 加载所有职业
   Future<void> loadProfessions() async {
-    _professions = await _taskService.getProfessions();
-    notifyListeners();
+    try {
+      _professions = await _taskService.getProfessions();
+      notifyListeners();
+    } catch (e) {
+      print('Error loading professions: $e');
+      _professions = []; // 如果加载失败，设置为空列表
+      notifyListeners();
+    }
   }
 
   // 添加职业
   Future<void> addProfession(Profession profession) async {
-    await _taskService.addProfession(profession);
-    await loadProfessions();
+    try {
+      await _taskService.addProfession(profession);
+      await loadProfessions();
+    } catch (e) {
+      print('Error adding profession: $e');
+    }
   }
 
   // 更新职业
   Future<void> updateProfession(Profession profession) async {
-    await _taskService.updateProfession(profession);
-    await loadProfessions();
+    try {
+      await _taskService.updateProfession(profession);
+      await loadProfessions();
+    } catch (e) {
+      print('Error updating profession: $e');
+    }
   }
 
   // 删除职业
   Future<void> deleteProfession(String id) async {
-    await _taskService.deleteProfession(id);
-    // 如果删除的是当前激活的职业，清除激活状态
-    if (_activeProfessionId == id) {
-      _activeProfessionId = null;
+    try {
+      await _taskService.deleteProfession(id);
+      // 如果删除的是当前激活的职业，清除激活状态
+      if (_activeProfessionId == id) {
+        _activeProfessionId = null;
+      }
+      await loadProfessions();
+    } catch (e) {
+      print('Error deleting profession: $e');
     }
-    await loadProfessions();
   }
 
   // 设置激活的职业
@@ -57,9 +75,16 @@ class ProfessionProvider with ChangeNotifier {
 
   // 为职业添加经验值（当完成关联任务时调用）
   Future<void> addExperienceToProfession(String professionId, int experience) async {
-    final profession = _professions.firstWhere((p) => p.id == professionId);
-    profession.addExperience(experience);
-    await updateProfession(profession);
+    try {
+      final professionIndex = _professions.indexWhere((p) => p.id == professionId);
+      if (professionIndex == -1) return;
+      
+      final profession = _professions[professionIndex];
+      profession.addExperience(experience);
+      await updateProfession(profession);
+    } catch (e) {
+      print('Error adding experience to profession: $e');
+    }
   }
 
   // 根据模板创建职业

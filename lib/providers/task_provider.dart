@@ -15,6 +15,10 @@ class TaskProvider with ChangeNotifier {
       case 'pending':
         return _tasks.where((task) => !task.isCompleted).toList();
       default:
+        if (_filter.startsWith('category:')) {
+          final category = _filter.substring(9); // 移除 'category:' 前缀
+          return _tasks.where((task) => task.category == category).toList();
+        }
         return _tasks;
     }
   }
@@ -29,35 +33,61 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> loadTasks() async {
-    _tasks = await _taskService.getTasks();
-    notifyListeners();
+    try {
+      _tasks = await _taskService.getTasks();
+      notifyListeners();
+    } catch (e) {
+      print('Error loading tasks: $e');
+      _tasks = []; // 如果加载失败，设置为空列表
+      notifyListeners();
+    }
   }
 
   Future<void> addTask(Task task) async {
-    await _taskService.addTask(task);
-    await loadTasks();
+    try {
+      await _taskService.addTask(task);
+      await loadTasks();
+    } catch (e) {
+      print('Error adding task: $e');
+    }
   }
 
   Future<void> updateTask(Task task) async {
-    await _taskService.updateTask(task);
-    await loadTasks();
+    try {
+      await _taskService.updateTask(task);
+      await loadTasks();
+    } catch (e) {
+      print('Error updating task: $e');
+    }
   }
 
    // 删除任务
   Future<void> deleteTask(String id) async {
-    await _taskService.deleteTask(id);
-    await loadTasks();
+    try {
+      await _taskService.deleteTask(id);
+      await loadTasks();
+    } catch (e) {
+      print('Error deleting task: $e');
+    }
   }
 
-  // 切换任务完成状态
+    // 切换任务完成状态
   Future<void> toggleTaskCompletion(String id) async {
     final task = _tasks.firstWhere((task) => task.id == id);
     final wasCompleted = task.isCompleted;
     task.isCompleted = !task.isCompleted;
     
-    // 如果任务刚完成且关联了职业，给职业添加经验
-    if (!wasCompleted && task.isCompleted && task.professionId != null && _professionProvider != null) {
-      await _professionProvider!.addExperienceToProfession(task.professionId!, task.xp);
+    // 如果任务刚完成且分类是职业名称，给职业添加经验
+    if (!wasCompleted && task.isCompleted && _professionProvider != null) {
+      // 通过职业名称查找职业
+      try {
+        final profession = _professionProvider!.professions.firstWhere(
+          (prof) => prof.name == task.category,
+        );
+        await _professionProvider!.addExperienceToProfession(profession.id, task.xp);
+      } catch (e) {
+        // 如果没找到对应职业，说明是默认分类，不做任何操作
+      }
     }
     
     await updateTask(task);

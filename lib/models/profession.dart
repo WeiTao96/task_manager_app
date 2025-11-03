@@ -42,23 +42,33 @@ class Profession {
 
   // 根据经验值更新等级
   void updateLevel() {
-    int newLevel = 1;
-    int totalExp = 0;
-    
-    while (totalExp <= experience) {
-      int levelExp = (newLevel * 100 * 1.2).round();
-      if (totalExp + levelExp > experience) break;
-      totalExp += levelExp;
-      newLevel++;
+    try {
+      int newLevel = 1;
+      int totalExp = 0;
+      
+      while (totalExp <= experience) {
+        int levelExp = (newLevel * 100 * 1.2).round();
+        if (totalExp + levelExp > experience) break;
+        totalExp += levelExp;
+        newLevel++;
+      }
+      
+      level = newLevel;
+    } catch (e) {
+      print('Error updating level: $e');
+      level = 1; // 如果出错，设置为1级
     }
-    
-    level = newLevel;
   }
 
   // 添加经验值
   void addExperience(int exp) {
-    experience += exp;
-    updateLevel();
+    try {
+      if (exp < 0) return; // 防止添加负经验值
+      experience += exp;
+      updateLevel();
+    } catch (e) {
+      print('Error adding experience: $e');
+    }
   }
 
   // 转换为Map，用于持久化存储
@@ -76,15 +86,28 @@ class Profession {
 
   // 从Map创建Profession对象
   factory Profession.fromMap(Map<String, dynamic> map) {
-    return Profession(
-      id: map['id'],
-      name: map['name'],
-      description: map['description'],
-      icon: map['icon'] ?? '💼',
-      color: map['color'] ?? 'blue',
-      level: map['level'] ?? 1,
-      experience: map['experience'] ?? 0,
-    );
+    try {
+      return Profession(
+        id: map['id']?.toString() ?? '',
+        name: map['name']?.toString() ?? '',
+        description: map['description']?.toString() ?? '',
+        icon: map['icon']?.toString() ?? '💼',
+        color: map['color']?.toString() ?? 'blue',
+        level: map['level'] != null ? (map['level'] as int) : 1,
+        experience: map['experience'] != null ? (map['experience'] as int) : 0,
+      );
+    } catch (e) {
+      print('Error creating Profession from map: $e');
+      print('Map data: $map');
+      // 返回一个默认的Profession对象，避免崩溃
+      return Profession(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: '错误职业',
+        description: '数据解析错误',
+        icon: '💼',
+        color: 'blue',
+      );
+    }
   }
 
   // 预定义职业模板

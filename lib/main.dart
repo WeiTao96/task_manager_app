@@ -8,6 +8,12 @@ import 'screens/profession_screen.dart';
 import 'screens/profession_form_screen.dart';
 
 void main() {
+  // 添加全局错误处理
+  FlutterError.onError = (FlutterErrorDetails details) {
+    print('Flutter Error: ${details.exception}');
+    print('Stack trace: ${details.stack}');
+  };
+  
   runApp(MyApp());
 }
 

@@ -18,9 +18,23 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TaskProvider>(context, listen: false).loadTasks();
-      Provider.of<ProfessionProvider>(context, listen: false).loadProfessions();
+      _loadData();
     });
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      final professionProvider = Provider.of<ProfessionProvider>(context, listen: false);
+      
+      await Future.wait([
+        taskProvider.loadTasks(),
+        professionProvider.loadProfessions(),
+      ]);
+    } catch (e) {
+      print('Error loading data: $e');
+      // 可以在这里显示错误提示给用户
+    }
   }
 
   @override

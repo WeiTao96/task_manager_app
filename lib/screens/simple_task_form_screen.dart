@@ -4,15 +4,14 @@ import '../providers/task_provider.dart';
 import '../providers/profession_provider.dart';
 import '../models/task.dart';
 
-class TaskFormScreen extends StatefulWidget {
-  static const routeName = '/add_task';
-  static const editRouteName = '/edit_task';
+class SimpleTaskFormScreen extends StatefulWidget {
+  static const routeName = '/simple_add_task';
   
   @override
-  _TaskFormScreenState createState() => _TaskFormScreenState();
+  _SimpleTaskFormScreenState createState() => _SimpleTaskFormScreenState();
 }
 
-class _TaskFormScreenState extends State<TaskFormScreen> {
+class _SimpleTaskFormScreenState extends State<SimpleTaskFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -20,18 +19,12 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   final _goldController = TextEditingController(text: '5');
   
   DateTime _dueDate = DateTime.now().add(Duration(days: 1));
-  String _selectedCategory = ''; // 将用作职业名称
-  
-  Task? _editingTask;
-  bool _isLoading = true;
+  String _selectedCategory = '';
   
   @override
   void initState() {
     super.initState();
-    // 立即设置loading为false，避免UI卡死
-    _isLoading = false;
     
-    // 使用PostFrameCallback延迟初始化
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeForm();
     });
@@ -39,24 +32,16 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   
   Future<void> _initializeForm() async {
     try {
-      // 检查是否是编辑模式
-      final args = ModalRoute.of(context)?.settings.arguments;
-      if (args != null && args is Task) {
-        setState(() {
-          _editingTask = args;
-          _titleController.text = args.title;
-          _descriptionController.text = args.description;
-          _dueDate = args.dueDate;
-          _selectedCategory = args.category;
-          _xpController.text = args.xp.toString();
-          _goldController.text = args.gold.toString();
-        });
-      }
-      
-      // 异步加载职业列表（如果需要）
       final professionProvider = Provider.of<ProfessionProvider>(context, listen: false);
       if (professionProvider.professions.isEmpty) {
-        professionProvider.loadProfessions();
+        await professionProvider.loadProfessions();
+      }
+      
+      // 设置默认选择
+      if (professionProvider.professions.isNotEmpty) {
+        setState(() {
+          _selectedCategory = professionProvider.professions.first.name;
+        });
       }
     } catch (e) {
       print('Error initializing form: $e');
@@ -76,30 +61,22 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_editingTask == null ? '添加任务' : '编辑任务'),
-        actions: [
-          if (_editingTask != null) ...[
-            IconButton(
-              icon: Icon(Icons.delete),
-              onPressed: _deleteTask,
-            ),
-          ],
-        ],
+        title: Text('添加任务'),
+        backgroundColor: Colors.blue[700],
       ),
-      body: _isLoading 
-        ? Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
               // 标题输入
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(
                   labelText: '任务标题',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.title),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -116,6 +93,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                 decoration: InputDecoration(
                   labelText: '任务描述（可选）',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.description),
                 ),
                 maxLines: 3,
               ),
@@ -130,10 +108,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                 ),
                 trailing: Icon(Icons.arrow_drop_down),
                 onTap: _selectDate,
+                contentPadding: EdgeInsets.zero,
               ),
               SizedBox(height: 16),
               
-              // 职业选择（职业优先）
+              // 职业选择
               Consumer<ProfessionProvider>(
                 builder: (context, professionProvider, child) {
                   final professions = professionProvider.professions;
@@ -142,45 +121,48 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   if (professions.isEmpty) {
                     return Card(
                       elevation: 2,
+                      color: Colors.orange[50],
                       child: Padding(
                         padding: EdgeInsets.all(16),
                         child: Column(
                           children: [
                             Icon(
                               Icons.work_outline,
-                              size: 48,
-                              color: Colors.grey[400],
+                              size: 40,
+                              color: Colors.orange[700],
                             ),
-                            SizedBox(height: 16),
+                            SizedBox(height: 12),
                             Text(
-                              '还没有职业',
+                              '需要先创建职业',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey[700],
+                                color: Colors.orange[800],
                               ),
                             ),
                             SizedBox(height: 8),
                             Text(
-                              '职业帮助您更好地组织任务和追踪成长进度',
+                              '职业帮助您追踪成长进度',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: Colors.orange[600],
                                 fontSize: 14,
                               ),
                             ),
-                            SizedBox(height: 16),
+                            SizedBox(height: 12),
                             ElevatedButton.icon(
                               onPressed: () {
                                 Navigator.of(context).pushNamed('/add_profession').then((_) {
                                   professionProvider.loadProfessions();
+                                  _initializeForm();
                                 });
                               },
-                              icon: Icon(Icons.add),
-                              label: Text('创建第一个职业'),
+                              icon: Icon(Icons.add, size: 18),
+                              label: Text('创建职业'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepPurple,
+                                backgroundColor: Colors.orange[600],
                                 foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               ),
                             ),
                           ],
@@ -190,76 +172,41 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   }
                   
                   // 有职业时，显示职业选择器
-                  // 如果当前选中的不在职业列表中，默认选择第一个职业
-                  if (_selectedCategory.isEmpty || !professions.any((prof) => prof.name == _selectedCategory)) {
+                  if (_selectedCategory.isEmpty && professions.isNotEmpty) {
                     _selectedCategory = professions.first.name;
                   }
                   
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        value: _selectedCategory,
-                        decoration: InputDecoration(
-                          labelText: '选择职业',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.work),
+                  return DropdownButtonFormField<String>(
+                    value: _selectedCategory.isEmpty ? professions.first.name : _selectedCategory,
+                    decoration: InputDecoration(
+                      labelText: '选择职业',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.work),
+                    ),
+                    items: professions.map((profession) {
+                      return DropdownMenuItem<String>(
+                        value: profession.name,
+                        child: Row(
+                          children: [
+                            Text(profession.icon, style: TextStyle(fontSize: 18)),
+                            SizedBox(width: 8),
+                            Expanded(child: Text(profession.name)),
+                            Text(
+                              'Lv.${profession.level}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.green[600],
+                              ),
+                            ),
+                          ],
                         ),
-                        items: professions.map((profession) {
-                          return DropdownMenuItem<String>(
-                            value: profession.name,
-                            child: Row(
-                              children: [
-                                Text(profession.icon, style: TextStyle(fontSize: 18)),
-                                SizedBox(width: 8),
-                                Expanded(child: Text(profession.name)),
-                                Text(
-                                  'Lv.${profession.level}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.green[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedCategory = newValue!;
-                          });
-                        },
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        children: [
-                          TextButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/add_profession').then((_) {
-                                professionProvider.loadProfessions();
-                              });
-                            },
-                            icon: Icon(Icons.add, size: 16),
-                            label: Text('创建职业'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.deepPurple,
-                              textStyle: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/professions');
-                            },
-                            icon: Icon(Icons.manage_accounts, size: 16),
-                            label: Text('管理职业'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.blue,
-                              textStyle: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedCategory = newValue!;
+                      });
+                    },
                   );
                 },
               ),
@@ -320,18 +267,18 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                 child: ElevatedButton(
                   onPressed: _saveTask,
                   child: Text(
-                    _editingTask == null ? '添加任务' : '更新任务',
-                    style: TextStyle(fontSize: 16),
+                    '添加任务',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue[700],
                   ),
                 ),
               ),
-                ],
-              ),
-            ),
+            ],
           ),
+        ),
+      ),
     );
   }
   
@@ -356,67 +303,48 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     final professionProvider = Provider.of<ProfessionProvider>(context, listen: false);
     if (professionProvider.professions.isEmpty || _selectedCategory.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('请先创建并选择一个职业')),
+        SnackBar(
+          content: Text('请先创建并选择一个职业'),
+          backgroundColor: Colors.orange[600],
+        ),
       );
       return;
     }
     
     try {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      final xp = int.tryParse(_xpController.text) ?? 0;
-      final gold = int.tryParse(_goldController.text) ?? 0;
+      final xp = int.tryParse(_xpController.text) ?? 10;
+      final gold = int.tryParse(_goldController.text) ?? 5;
       
-      if (_editingTask == null) {
-        // 添加新任务
-        final newTask = Task(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          dueDate: _dueDate,
-          category: _selectedCategory,
-          xp: xp,
-          gold: gold,
-        );
-        await taskProvider.addTask(newTask);
-      } else {
-        // 更新现有任务
-        _editingTask!.title = _titleController.text.trim();
-        _editingTask!.description = _descriptionController.text.trim();
-        _editingTask!.dueDate = _dueDate;
-        _editingTask!.category = _selectedCategory;
-        _editingTask!.xp = xp;
-        _editingTask!.gold = gold;
-        await taskProvider.updateTask(_editingTask!);
-      }
+      final newTask = Task(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        dueDate: _dueDate,
+        category: _selectedCategory,
+        xp: xp,
+        gold: gold,
+      );
+      
+      await taskProvider.addTask(newTask);
       
       if (mounted) {
         Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('任务添加成功！'),
+            backgroundColor: Colors.green[600],
+          ),
+        );
       }
     } catch (e) {
       print('Error saving task: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存任务失败：${e.toString()}')),
-        );
-      }
-    }
-  }
-  
-  Future<void> _deleteTask() async {
-    if (_editingTask == null) return;
-    
-    try {
-      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      await taskProvider.deleteTask(_editingTask!.id);
-      
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      print('Error deleting task: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除任务失败：${e.toString()}')),
+          SnackBar(
+            content: Text('保存任务失败：${e.toString()}'),
+            backgroundColor: Colors.red[600],
+          ),
         );
       }
     }

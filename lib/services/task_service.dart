@@ -15,9 +15,23 @@ class TaskService {
   }
 
   _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'tasks.db');
-    // bump DB version to 3 to include professions table and professionId in tasks
-    return await openDatabase(path, version: 3, onCreate: _createTables, onUpgrade: _onUpgrade);
+    try {
+      String path = join(await getDatabasesPath(), 'tasks.db');
+      // bump DB version to 3 to include professions table and professionId in tasks
+      return await openDatabase(
+        path, 
+        version: 3, 
+        onCreate: _createTables, 
+        onUpgrade: _onUpgrade,
+        // 添加数据库打开超时
+        onOpen: (db) async {
+          print('Database opened successfully');
+        },
+      ).timeout(Duration(seconds: 10)); // 10秒超时
+    } catch (e) {
+      print('Error initializing database: $e');
+      rethrow;
+    }
   }
 
   _createTables(Database db, int version) async {
@@ -90,40 +104,67 @@ class TaskService {
 
   // 添加任务
   Future<void> addTask(Task task) async {
-    final db = await database;
-    await db.insert(
-      'tasks',
-      task.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    try {
+      final db = await database;
+      await db.insert(
+        'tasks',
+        task.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      print('Error adding task to database: $e');
+      rethrow;
+    }
   }
 
   // 获取所有任务
   Future<List<Task>> getTasks() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('tasks');
-    return List.generate(maps.length, (i) => Task.fromMap(maps[i]));
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query('tasks');
+      return List.generate(maps.length, (i) {
+        try {
+          return Task.fromMap(maps[i]);
+        } catch (e) {
+          print('Error parsing task at index $i: $e');
+          return null;
+        }
+      }).where((task) => task != null).cast<Task>().toList();
+    } catch (e) {
+      print('Error getting tasks: $e');
+      return [];
+    }
   }
 
   // 更新任务
   Future<void> updateTask(Task task) async {
-    final db = await database;
-    await db.update(
-      'tasks',
-      task.toMap(),
-      where: 'id = ?',
-      whereArgs: [task.id],
-    );
+    try {
+      final db = await database;
+      await db.update(
+        'tasks',
+        task.toMap(),
+        where: 'id = ?',
+        whereArgs: [task.id],
+      );
+    } catch (e) {
+      print('Error updating task in database: $e');
+      rethrow;
+    }
   }
 
   // 删除任务
   Future<void> deleteTask(String id) async {
-    final db = await database;
-    await db.delete(
-      'tasks',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    try {
+      final db = await database;
+      await db.delete(
+        'tasks',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      print('Error deleting task from database: $e');
+      rethrow;
+    }
   }
 
   // === 职业相关操作 ===
@@ -140,9 +181,21 @@ class TaskService {
 
   // 获取所有职业
   Future<List<Profession>> getProfessions() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('professions');
-    return List.generate(maps.length, (i) => Profession.fromMap(maps[i]));
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query('professions');
+      return List.generate(maps.length, (i) {
+        try {
+          return Profession.fromMap(maps[i]);
+        } catch (e) {
+          print('Error parsing profession at index $i: $e');
+          return null;
+        }
+      }).where((profession) => profession != null).cast<Profession>().toList();
+    } catch (e) {
+      print('Error getting professions: $e');
+      return [];
+    }
   }
 
   // 更新职业

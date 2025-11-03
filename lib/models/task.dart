@@ -4,10 +4,9 @@ class Task {
   String description;
   bool isCompleted;
   DateTime dueDate;
-  String category;
+  String category; // 现在直接使用职业名称作为分类
   int xp; // 经验值
   int gold; // 金币
-  String? professionId; // 关联的职业ID
 
   Task({
     required this.id,
@@ -18,7 +17,6 @@ class Task {
     required this.category,
     this.xp = 0,
     this.gold = 0,
-    this.professionId,
   });
 
   // 转换为Map，用于持久化存储
@@ -32,11 +30,10 @@ class Task {
       'category': category,
       'xp': xp,
       'gold': gold,
-      'professionId': professionId,
     };
   }
 
-  // 从Map创建Task对象
+    // 从Map创建Task对象
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       id: map['id'],
@@ -47,7 +44,6 @@ class Task {
       category: map['category'],
       xp: map.containsKey('xp') && map['xp'] != null ? (map['xp'] as int) : 0,
       gold: map.containsKey('gold') && map['gold'] != null ? (map['gold'] as int) : 0,
-      professionId: map['professionId'],
     );
   }
 }

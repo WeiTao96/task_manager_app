@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/simple_task_form_screen.dart';
+import '../screens/ultra_simple_task_form_screen.dart';
 
 class AddTaskFAB extends StatelessWidget {
   @override
@@ -8,7 +8,7 @@ class AddTaskFAB extends StatelessWidget {
       onPressed: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => SimpleTaskFormScreen()),
+          MaterialPageRoute(builder: (context) => UltraSimpleTaskFormScreen()),
         );
       },
       child: Icon(Icons.add, color: Colors.white),

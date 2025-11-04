@@ -7,6 +7,7 @@ import '../widgets/character_panel.dart';
 import '../widgets/filter_chips.dart';
 import '../widgets/add_task_fab.dart';
 import '../screens/profession_screen.dart';
+import '../screens/shop_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -47,6 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.blue[700],
         elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(Icons.shopping_bag),
+            onPressed: () {
+              Navigator.of(context).pushNamed(ShopScreen.routeName);
+            },
+            tooltip: '商店',
+          ),
           IconButton(
             icon: Icon(Icons.work),
             onPressed: () {

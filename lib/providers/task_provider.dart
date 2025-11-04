@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../services/task_service.dart';
 import 'profession_provider.dart';
+import 'shop_provider.dart';
 
 class TaskProvider with ChangeNotifier {
   List<Task> _tasks = [];
   String _filter = 'all'; // all, completed, pending
   ProfessionProvider? _professionProvider; // 职业提供者引用
+  ShopProvider? _shopProvider; // 商店提供者引用
 
   List<Task> get tasks {
     switch (_filter) {
@@ -30,6 +32,11 @@ class TaskProvider with ChangeNotifier {
   // 设置职业提供者引用
   void setProfessionProvider(ProfessionProvider professionProvider) {
     _professionProvider = professionProvider;
+  }
+
+  // 设置商店提供者引用
+  void setShopProvider(ShopProvider shopProvider) {
+    _shopProvider = shopProvider;
   }
 
   Future<void> loadTasks() async {
@@ -79,12 +86,26 @@ class TaskProvider with ChangeNotifier {
     
     // 如果任务刚完成且分类是职业名称，给职业添加经验
     if (!wasCompleted && task.isCompleted && _professionProvider != null) {
+      // 应用商店增益效果
+      double expMultiplier = 1.0;
+      if (_shopProvider != null) {
+        expMultiplier = _shopProvider!.getExpMultiplier();
+      }
+      
+      final finalExp = (task.xp * expMultiplier).round();
+      
       // 通过职业名称查找职业
       try {
         final profession = _professionProvider!.professions.firstWhere(
           (prof) => prof.name == task.category,
         );
-        await _professionProvider!.addExperienceToProfession(profession.id, task.xp);
+        await _professionProvider!.addExperienceToProfession(profession.id, finalExp);
+        
+        // 如果应用了增益，显示额外获得的经验
+        if (expMultiplier > 1.0) {
+          final bonusExp = finalExp - task.xp;
+          print('经验药水生效！额外获得 $bonusExp 经验！');
+        }
       } catch (e) {
         // 如果没找到对应职业，说明是默认分类，不做任何操作
       }
@@ -155,5 +176,26 @@ class TaskProvider with ChangeNotifier {
       gold: gold,
     );
     await addTask(task);
+  }
+
+  // 更新用户金币（用于商店消费）
+  Future<void> updateGold(int newGoldAmount) async {
+    // 这里可以添加一个记录来跟踪金币的使用
+    // 暂时通过添加一个负值的"交易"记录来实现
+    if (newGoldAmount < totalGold) {
+      final spent = totalGold - newGoldAmount;
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
+      final transaction = Task(
+        id: id,
+        title: '商店消费',
+        description: '在商店购买物品',
+        isCompleted: true,
+        dueDate: DateTime.now(),
+        category: '交易',
+        xp: 0,
+        gold: -spent, // 负值表示消费
+      );
+      await addTask(transaction);
+    }
   }
 }

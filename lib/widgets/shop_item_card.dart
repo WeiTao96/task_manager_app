@@ -106,6 +106,24 @@ class ShopItemCard extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                         ],
+                        if (!item.isRepeatable) ...[
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red[600],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '限购',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                        ],
                       ],
                     ),
                   ),

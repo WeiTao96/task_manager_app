@@ -19,13 +19,26 @@ class ShopProvider with ChangeNotifier {
   int get userGold => _userGold;
   bool get isLoading => _isLoading;
   
-  // 获取可用的商品（排除已过期的限时商品）
+  // 获取可用的商品（排除已过期的限时商品和不可重复购买且已购买的商品）
   List<ShopItem> get availableItems {
     final now = DateTime.now();
     final available = _items.where((item) {
+      // 检查是否为限时商品且已过期
       if (item.isLimited && item.limitedUntil != null) {
-        return now.isBefore(item.limitedUntil!);
+        if (now.isAfter(item.limitedUntil!)) {
+          return false;
+        }
       }
+      
+      // 检查是否为不可重复购买的商品且已购买
+      if (!item.isRepeatable) {
+        final hasPurchased = _purchaseHistory.any((record) => 
+          record.itemId == item.id);
+        if (hasPurchased) {
+          return false; // 已购买且不可重复购买，不显示在商店中
+        }
+      }
+      
       return true;
     }).toList();
     return available;

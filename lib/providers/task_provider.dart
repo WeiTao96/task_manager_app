@@ -51,6 +51,10 @@ class TaskProvider with ChangeNotifier {
     _isLoading = true;
     try {
       _tasks = await _taskService.getTasks();
+      
+      // 清理不需要的系统任务（如商店消费任务）
+      await _cleanupSystemTasks();
+      
       notifyListeners();
     } catch (e) {
       print('Error loading tasks: $e');
@@ -58,6 +62,16 @@ class TaskProvider with ChangeNotifier {
       notifyListeners();
     } finally {
       _isLoading = false;
+    }
+  }
+
+  // 清理不需要的系统任务
+  Future<void> _cleanupSystemTasks() async {
+    try {
+      // 清理商店消费任务
+      await removeTasksByTitle('商店消费');
+    } catch (e) {
+      print('Error cleaning up system tasks: $e');
     }
   }
 
@@ -191,22 +205,32 @@ class TaskProvider with ChangeNotifier {
 
   // 更新用户金币（用于商店消费）
   Future<void> updateGold(int newGoldAmount) async {
-    // 这里可以添加一个记录来跟踪金币的使用
-    // 暂时通过添加一个负值的"交易"记录来实现
-    if (newGoldAmount < totalGold) {
-      final spent = totalGold - newGoldAmount;
-      final id = DateTime.now().millisecondsSinceEpoch.toString();
-      final transaction = Task(
-        id: id,
-        title: '商店消费',
-        description: '在商店购买物品',
-        isCompleted: true,
-        dueDate: DateTime.now(),
-        category: '交易',
-        xp: 0,
-        gold: -spent, // 负值表示消费
-      );
-      await addTask(transaction);
+    // 直接更新金币总量，不创建交易记录
+    // 商店消费应该通过ShopProvider的购买记录来跟踪，而不是任务系统
+    
+    // 如果需要记录金币变化，应该在ShopProvider中处理
+    // 这里只负责更新金币数量
+    notifyListeners();
+  }
+
+  // 删除特定标题的任务（用于清理不需要的系统任务）
+  Future<void> removeTasksByTitle(String title) async {
+    try {
+      // 找出所有匹配标题的任务
+      final tasksToRemove = _tasks.where((task) => task.title == title).toList();
+      
+      // 从数据库中删除
+      for (final task in tasksToRemove) {
+        await _taskService.deleteTask(task.id);
+      }
+      
+      // 从本地列表中移除
+      _tasks.removeWhere((task) => task.title == title);
+      
+      notifyListeners();
+      print('Removed ${tasksToRemove.length} tasks with title: $title');
+    } catch (e) {
+      print('Error removing tasks by title: $e');
     }
   }
 }

@@ -20,6 +20,7 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
   String _selectedIcon = '🎁';
   bool _isLimited = false;
   DateTime? _limitedUntil;
+  bool _isRepeatable = true;
   
   ShopItem? _editingItem;
   bool _isLoading = false;
@@ -59,6 +60,7 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
           _selectedIcon = args.icon;
           _isLimited = args.isLimited;
           _limitedUntil = args.limitedUntil;
+          _isRepeatable = args.isRepeatable;
         });
       }
     } catch (e) {
@@ -260,6 +262,44 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
                       ),
                     ),
                   ),
+                  SizedBox(height: 16),
+                  
+                  // 重复购买设置
+                  Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.repeat, color: Colors.blue[600]),
+                              SizedBox(width: 8),
+                              Text(
+                                '重复购买设置',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 12),
+                          SwitchListTile(
+                            title: Text('允许重复购买'),
+                            subtitle: Text('关闭后商品购买一次后将从商店中消失'),
+                            value: _isRepeatable,
+                            onChanged: (bool value) {
+                              setState(() {
+                                _isRepeatable = value;
+                              });
+                            },
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   SizedBox(height: 32),
                   
                   // 保存按钮
@@ -326,6 +366,7 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
           price: price,
           isLimited: _isLimited,
           limitedUntil: _limitedUntil,
+          isRepeatable: _isRepeatable,
         );
         
         await shopProvider.addItem(item);
@@ -348,6 +389,7 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
           price: price,
           isLimited: _isLimited,
           limitedUntil: _limitedUntil,
+          isRepeatable: _isRepeatable,
         );
         
         final success = await shopProvider.updateItem(item);

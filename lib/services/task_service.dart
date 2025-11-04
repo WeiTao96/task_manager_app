@@ -20,10 +20,10 @@ class TaskService {
       String path = join(await getDatabasesPath(), 'tasks.db');
       print('Initializing database at: $path');
       
-      // bump DB version to 6 to remove type from shop_items
+      // bump DB version to 7 to add isRepeatable to shop_items
       return await openDatabase(
         path, 
-        version: 6, 
+        version: 7, 
         onCreate: _createTables, 
         onUpgrade: _onUpgrade,
         // 简化数据库打开配置，避免PRAGMA问题
@@ -111,6 +111,7 @@ class TaskService {
         effect TEXT DEFAULT '{}',
         isLimited INTEGER DEFAULT 0,
         limitedUntil TEXT,
+        isRepeatable INTEGER DEFAULT 1,
         createdBy TEXT DEFAULT 'user',
         createdTime TEXT NOT NULL
       )
@@ -292,6 +293,16 @@ class TaskService {
       } catch (e) {
         print('Error migrating shop_items table for type removal: $e');
         // 如果出错，忽略继续
+      }
+    }
+    
+    if (oldVersion < 7) {
+      // 添加 isRepeatable 字段到 shop_items 表
+      try {
+        await db.execute('ALTER TABLE shop_items ADD COLUMN isRepeatable INTEGER DEFAULT 1');
+      } catch (e) {
+        print('Error adding isRepeatable column: $e');
+        // 如果字段已存在，忽略错误
       }
     }
   }

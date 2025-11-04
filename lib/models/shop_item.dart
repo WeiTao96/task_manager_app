@@ -7,6 +7,7 @@ class ShopItem {
   final Map<String, dynamic> effect; // 物品效果数据
   final bool isLimited; // 是否限量
   final DateTime? limitedUntil; // 限量截止时间
+  final bool isRepeatable; // 是否可重复购买
   
   ShopItem({
     required this.id,
@@ -17,6 +18,7 @@ class ShopItem {
     this.effect = const {},
     this.isLimited = false,
     this.limitedUntil,
+    this.isRepeatable = true, // 默认可重复购买
   });
 
   factory ShopItem.fromMap(Map<String, dynamic> map) {
@@ -27,10 +29,15 @@ class ShopItem {
       icon: map['icon'] ?? '🎁',
       price: map['price'] ?? 0,
       effect: Map<String, dynamic>.from(map['effect'] ?? {}),
-      isLimited: map['isLimited'] ?? false,
+      isLimited: (map['isLimited'] is int) 
+        ? (map['isLimited'] as int) == 1 
+        : (map['isLimited'] ?? false),
       limitedUntil: map['limitedUntil'] != null 
         ? DateTime.parse(map['limitedUntil']) 
         : null,
+      isRepeatable: (map['isRepeatable'] is int) 
+        ? (map['isRepeatable'] as int) == 1 
+        : (map['isRepeatable'] ?? true),
     );
   }
 
@@ -42,8 +49,9 @@ class ShopItem {
       'icon': icon,
       'price': price,
       'effect': effect,
-      'isLimited': isLimited,
+      'isLimited': isLimited ? 1 : 0,
       'limitedUntil': limitedUntil?.toIso8601String(),
+      'isRepeatable': isRepeatable ? 1 : 0,
     };
   }
 
@@ -56,6 +64,7 @@ class ShopItem {
     Map<String, dynamic>? effect,
     bool isLimited = false,
     DateTime? limitedUntil,
+    bool isRepeatable = true,
   }) {
     return ShopItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -66,6 +75,7 @@ class ShopItem {
       effect: effect ?? {},
       isLimited: isLimited,
       limitedUntil: limitedUntil,
+      isRepeatable: isRepeatable,
     );
   }
 }
@@ -98,7 +108,9 @@ class PurchaseRecord {
       purchaseTime: DateTime.parse(map['purchaseTime']),
       pricePaid: map['pricePaid'] ?? 0,
       usedTime: map['usedTime'] != null ? DateTime.parse(map['usedTime']) : null,
-      isActive: map['isActive'] ?? true,
+      isActive: (map['isActive'] is int) 
+        ? (map['isActive'] as int) == 1 
+        : (map['isActive'] ?? true),
     );
   }
 
@@ -110,7 +122,7 @@ class PurchaseRecord {
       'purchaseTime': purchaseTime.toIso8601String(),
       'pricePaid': pricePaid,
       'usedTime': usedTime?.toIso8601String(),
-      'isActive': isActive,
+      'isActive': isActive ? 1 : 0,
     };
   }
 }

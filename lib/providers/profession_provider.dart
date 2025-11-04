@@ -5,6 +5,7 @@ import '../services/task_service.dart';
 class ProfessionProvider with ChangeNotifier {
   List<Profession> _professions = [];
   String? _activeProfessionId; // 当前激活的职业
+  bool _isLoading = false; // 防止重复加载
 
   List<Profession> get professions => _professions;
   
@@ -18,11 +19,19 @@ class ProfessionProvider with ChangeNotifier {
   }
 
   String? get activeProfessionId => _activeProfessionId;
+  bool get isLoading => _isLoading;
 
   final TaskService _taskService = TaskService();
 
   // 加载所有职业
   Future<void> loadProfessions() async {
+    // 防止重复加载
+    if (_isLoading) {
+      print('Already loading professions, skipping...');
+      return;
+    }
+    
+    _isLoading = true;
     try {
       _professions = await _taskService.getProfessions();
       notifyListeners();
@@ -30,6 +39,8 @@ class ProfessionProvider with ChangeNotifier {
       print('Error loading professions: $e');
       _professions = []; // 如果加载失败，设置为空列表
       notifyListeners();
+    } finally {
+      _isLoading = false;
     }
   }
 

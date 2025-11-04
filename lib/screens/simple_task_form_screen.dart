@@ -20,32 +20,45 @@ class _SimpleTaskFormScreenState extends State<SimpleTaskFormScreen> {
   
   DateTime _dueDate = DateTime.now().add(Duration(days: 1));
   String _selectedCategory = '';
+  bool _hasInitialized = false;
   
   @override
   void initState() {
     super.initState();
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeForm();
-    });
+    // 简化初始化，立即设置一个默认值
+    _selectedCategory = '默认';
   }
   
-  Future<void> _initializeForm() async {
-    try {
-      final professionProvider = Provider.of<ProfessionProvider>(context, listen: false);
-      if (professionProvider.professions.isEmpty) {
-        await professionProvider.loadProfessions();
-      }
-      
-      // 设置默认选择
-      if (professionProvider.professions.isNotEmpty) {
-        setState(() {
-          _selectedCategory = professionProvider.professions.first.name;
-        });
-      }
-    } catch (e) {
-      print('Error initializing form: $e');
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // 只在第一次构建时初始化表单
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _loadProfessionsAsync();
     }
+  }
+  
+  void _loadProfessionsAsync() {
+    // 异步加载职业，不影响初始UI显示
+    Future.microtask(() async {
+      try {
+        final professionProvider = Provider.of<ProfessionProvider>(context, listen: false);
+        if (professionProvider.professions.isEmpty && !professionProvider.isLoading) {
+          await professionProvider.loadProfessions();
+          
+          // 加载完成后更新默认选择
+          if (mounted && professionProvider.professions.isNotEmpty) {
+            setState(() {
+              _selectedCategory = professionProvider.professions.first.name;
+            });
+          }
+        }
+      } catch (e) {
+        print('Error loading professions: $e');
+      }
+    });
   }
   
   @override
@@ -115,6 +128,27 @@ class _SimpleTaskFormScreenState extends State<SimpleTaskFormScreen> {
               // 职业选择
               Consumer<ProfessionProvider>(
                 builder: (context, professionProvider, child) {
+                  // 如果正在加载，显示加载指示器
+                  if (professionProvider.isLoading) {
+                    return Card(
+                      elevation: 2,
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 16),
+                            Text('正在加载职业列表...'),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  
                   final professions = professionProvider.professions;
                   
                   // 如果没有职业，显示创建职业提示
@@ -154,7 +188,7 @@ class _SimpleTaskFormScreenState extends State<SimpleTaskFormScreen> {
                               onPressed: () {
                                 Navigator.of(context).pushNamed('/add_profession').then((_) {
                                   professionProvider.loadProfessions();
-                                  _initializeForm();
+                                  _loadProfessionsAsync();
                                 });
                               },
                               icon: Icon(Icons.add, size: 18),
@@ -172,12 +206,22 @@ class _SimpleTaskFormScreenState extends State<SimpleTaskFormScreen> {
                   }
                   
                   // 有职业时，显示职业选择器
-                  if (_selectedCategory.isEmpty && professions.isNotEmpty) {
-                    _selectedCategory = professions.first.name;
+                  // 确保选择的职业在列表中存在
+                  String? currentValue = _selectedCategory;
+                  if (currentValue.isEmpty || !professions.any((prof) => prof.name == currentValue)) {
+                    currentValue = professions.first.name;
+                    // 异步更新选择的分类
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _selectedCategory = currentValue!;
+                        });
+                      }
+                    });
                   }
                   
                   return DropdownButtonFormField<String>(
-                    value: _selectedCategory.isEmpty ? professions.first.name : _selectedCategory,
+                    value: currentValue,
                     decoration: InputDecoration(
                       labelText: '选择职业',
                       border: OutlineInputBorder(),
@@ -203,9 +247,11 @@ class _SimpleTaskFormScreenState extends State<SimpleTaskFormScreen> {
                       );
                     }).toList(),
                     onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedCategory = newValue!;
-                      });
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedCategory = newValue;
+                        });
+                      }
                     },
                   );
                 },

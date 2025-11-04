@@ -24,42 +24,55 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   
   Task? _editingTask;
   bool _isLoading = true;
+  bool _hasInitialized = false;
   
   @override
   void initState() {
     super.initState();
-    // 立即设置loading为false，避免UI卡死
-    _isLoading = false;
-    
-    // 使用PostFrameCallback延迟初始化
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeForm();
-    });
+    _isLoading = false; // 默认不显示加载指示器
   }
   
-  Future<void> _initializeForm() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // 只在第一次构建时初始化表单
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _initializeForm();
+    }
+  }
+  
+  void _initializeForm() {
     try {
       // 检查是否是编辑模式
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args != null && args is Task) {
-        setState(() {
-          _editingTask = args;
-          _titleController.text = args.title;
-          _descriptionController.text = args.description;
-          _dueDate = args.dueDate;
-          _selectedCategory = args.category;
-          _xpController.text = args.xp.toString();
-          _goldController.text = args.gold.toString();
-        });
+        _editingTask = args;
+        _titleController.text = args.title;
+        _descriptionController.text = args.description;
+        _dueDate = args.dueDate;
+        _selectedCategory = args.category;
+        _xpController.text = args.xp.toString();
+        _goldController.text = args.gold.toString();
       }
       
-      // 异步加载职业列表（如果需要）
-      final professionProvider = Provider.of<ProfessionProvider>(context, listen: false);
-      if (professionProvider.professions.isEmpty) {
-        professionProvider.loadProfessions();
-      }
+      // 异步加载职业列表（非阻塞）
+      _loadProfessionsIfNeeded();
     } catch (e) {
       print('Error initializing form: $e');
+    }
+  }
+  
+  void _loadProfessionsIfNeeded() {
+    try {
+      final professionProvider = Provider.of<ProfessionProvider>(context, listen: false);
+      if (professionProvider.professions.isEmpty) {
+        // 异步加载，不阻塞UI
+        Future.microtask(() => professionProvider.loadProfessions());
+      }
+    } catch (e) {
+      print('Error loading professions: $e');
     }
   }
   
@@ -136,6 +149,23 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               // 职业选择（职业优先）
               Consumer<ProfessionProvider>(
                 builder: (context, professionProvider, child) {
+                  // 如果正在加载，显示加载指示器
+                  if (professionProvider.isLoading) {
+                    return Card(
+                      elevation: 2,
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            CircularProgressIndicator(strokeWidth: 2),
+                            SizedBox(width: 16),
+                            Text('正在加载职业列表...'),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  
                   final professions = professionProvider.professions;
                   
                   // 如果没有职业，显示创建职业提示
@@ -192,14 +222,18 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   // 有职业时，显示职业选择器
                   // 如果当前选中的不在职业列表中，默认选择第一个职业
                   if (_selectedCategory.isEmpty || !professions.any((prof) => prof.name == _selectedCategory)) {
-                    _selectedCategory = professions.first.name;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      setState(() {
+                        _selectedCategory = professions.first.name;
+                      });
+                    });
                   }
                   
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        value: _selectedCategory.isEmpty ? null : _selectedCategory,
                         decoration: InputDecoration(
                           labelText: '选择职业',
                           border: OutlineInputBorder(),
@@ -225,9 +259,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                           );
                         }).toList(),
                         onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedCategory = newValue!;
-                          });
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedCategory = newValue;
+                            });
+                          }
                         },
                       ),
                       SizedBox(height: 8),

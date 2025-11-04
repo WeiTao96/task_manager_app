@@ -14,19 +14,46 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
+  bool _hasInitialized = false;
   
   @override
   void initState() {
     super.initState();
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     
-    // 初始化商店
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _initializeShop();
+    }
+  }
+  
+  void _initializeShop() {
+    try {
       final shopProvider = Provider.of<ShopProvider>(context, listen: false);
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
       
-      shopProvider.initializeShop();
-      shopProvider.updateUserGold(taskProvider.totalGold);
-    });
+      // 异步初始化，避免阻塞UI
+      Future.microtask(() async {
+        await shopProvider.initializeShop();
+        shopProvider.updateUserGold(taskProvider.totalGold);
+      });
+    } catch (e) {
+      print('Error initializing shop: $e');
+    }
+  }
+  
+  void _refreshShop() {
+    try {
+      final shopProvider = Provider.of<ShopProvider>(context, listen: false);
+      // 重新加载商品列表
+      Future.microtask(() => shopProvider.reloadItems());
+    } catch (e) {
+      print('Error refreshing shop: $e');
+    }
   }
 
   @override
@@ -39,12 +66,10 @@ class _ShopScreenState extends State<ShopScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.add_shopping_cart),
-            onPressed: () {
-              Navigator.of(context).pushNamed(ShopItemFormScreen.routeName).then((_) {
-                // 返回时重新加载商品列表
-                final shopProvider = Provider.of<ShopProvider>(context, listen: false);
-                shopProvider.reloadItems();
-              });
+            onPressed: () async {
+              await Navigator.of(context).pushNamed(ShopItemFormScreen.routeName);
+              // 返回后刷新商店
+              _refreshShop();
             },
             tooltip: '添加商品',
           ),
@@ -205,15 +230,13 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  void _editItem(ShopItem item) {
-    Navigator.of(context).pushNamed(
+  void _editItem(ShopItem item) async {
+    await Navigator.of(context).pushNamed(
       ShopItemFormScreen.editRouteName,
       arguments: item,
-    ).then((_) {
-      // 返回时重新加载商品列表
-      final shopProvider = Provider.of<ShopProvider>(context, listen: false);
-      shopProvider.reloadItems();
-    });
+    );
+    // 返回后刷新商店
+    _refreshShop();
   }
 
   Future<void> _purchaseItem(ShopItem item) async {

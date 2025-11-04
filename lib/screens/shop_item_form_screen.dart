@@ -23,6 +23,7 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
   
   ShopItem? _editingItem;
   bool _isLoading = false;
+  bool _hasInitialized = false;
   
   final List<String> _commonIcons = [
     '🎁', '🏆', '👑', '💎', '🔑', '🧪', '🪙', '📋', 
@@ -33,13 +34,20 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
   @override
   void initState() {
     super.initState();
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeForm();
-    });
   }
   
-  Future<void> _initializeForm() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // 只在第一次构建时初始化表单
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _initializeForm();
+    }
+  }
+  
+  void _initializeForm() {
     try {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args != null && args is ShopItem) {
@@ -320,16 +328,15 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
           limitedUntil: _limitedUntil,
         );
         
-        final success = await shopProvider.addItem(item);
-        if (success) {
-          if (mounted) {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('商品添加成功！')),
-            );
-          }
-        } else {
-          throw Exception('添加商品失败');
+        await shopProvider.addItem(item);
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('商品添加成功！'),
+              backgroundColor: Colors.green[600],
+            ),
+          );
         }
       } else {
         // 更新现有商品
@@ -344,14 +351,15 @@ class _ShopItemFormScreenState extends State<ShopItemFormScreen> {
         );
         
         final success = await shopProvider.updateItem(item);
-        if (success) {
-          if (mounted) {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('商品更新成功！')),
-            );
-          }
-        } else {
+        if (success && mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('商品更新成功！'),
+              backgroundColor: Colors.green[600],
+            ),
+          );
+        } else if (!success) {
           throw Exception('更新商品失败');
         }
       }

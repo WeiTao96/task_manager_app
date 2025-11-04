@@ -18,17 +18,25 @@ class TaskService {
   _initDatabase() async {
     try {
       String path = join(await getDatabasesPath(), 'tasks.db');
+      print('Initializing database at: $path');
+      
       // bump DB version to 6 to remove type from shop_items
       return await openDatabase(
         path, 
         version: 6, 
         onCreate: _createTables, 
         onUpgrade: _onUpgrade,
-        // 添加数据库打开超时
+        // 简化数据库打开配置，避免PRAGMA问题
         onOpen: (db) async {
           print('Database opened successfully');
         },
-      ).timeout(Duration(seconds: 10)); // 10秒超时
+      ).timeout(
+        Duration(seconds: 15), 
+        onTimeout: () {
+          print('Database initialization timeout');
+          throw Exception('Database initialization timeout');
+        },
+      ); // 15秒超时
     } catch (e) {
       print('Error initializing database: $e');
       rethrow;
@@ -523,6 +531,8 @@ class TaskService {
       itemData,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    
+    print('Shop item saved to database: ${item['name']}');
   }
 
   // 获取所有商店商品

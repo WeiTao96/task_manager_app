@@ -9,6 +9,7 @@ class TaskProvider with ChangeNotifier {
   String _filter = 'all'; // all, completed, pending
   ProfessionProvider? _professionProvider; // 职业提供者引用
   ShopProvider? _shopProvider; // 商店提供者引用
+  bool _isLoading = false; // 防止重复加载
 
   List<Task> get tasks {
     switch (_filter) {
@@ -26,6 +27,7 @@ class TaskProvider with ChangeNotifier {
   }
 
   String get filter => _filter;
+  bool get isLoading => _isLoading;
 
   final TaskService _taskService = TaskService();
 
@@ -40,6 +42,13 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> loadTasks() async {
+    // 防止重复加载
+    if (_isLoading) {
+      print('Already loading tasks, skipping...');
+      return;
+    }
+    
+    _isLoading = true;
     try {
       _tasks = await _taskService.getTasks();
       notifyListeners();
@@ -47,6 +56,8 @@ class TaskProvider with ChangeNotifier {
       print('Error loading tasks: $e');
       _tasks = []; // 如果加载失败，设置为空列表
       notifyListeners();
+    } finally {
+      _isLoading = false;
     }
   }
 

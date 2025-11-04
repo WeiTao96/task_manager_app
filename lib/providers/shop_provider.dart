@@ -10,26 +10,35 @@ class ShopProvider with ChangeNotifier {
   List<ShopItem> _inventory = []; // 用户已拥有的物品
   Map<String, DateTime> _activeBoosts = {}; // 当前生效的增益
   int _userGold = 0;
-  
+  bool _isLoading = false; // 防止重复加载
+
   List<ShopItem> get items => _items;
   List<PurchaseRecord> get purchaseHistory => _purchaseHistory;
   List<ShopItem> get inventory => _inventory;
   Map<String, DateTime> get activeBoosts => _activeBoosts;
   int get userGold => _userGold;
+  bool get isLoading => _isLoading;
   
   // 获取可用的商品（排除已过期的限时商品）
   List<ShopItem> get availableItems {
     final now = DateTime.now();
-    return _items.where((item) {
+    final available = _items.where((item) {
       if (item.isLimited && item.limitedUntil != null) {
         return now.isBefore(item.limitedUntil!);
       }
       return true;
     }).toList();
+    return available;
   }
   
   // 初始化商店
   Future<void> initializeShop() async {
+    if (_isLoading) {
+      print('Shop already initializing, skipping...');
+      return;
+    }
+    
+    _isLoading = true;
     try {
       // 从数据库加载用户创建的商品
       await _loadShopItems();
@@ -42,6 +51,8 @@ class ShopProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('Error initializing shop: $e');
+    } finally {
+      _isLoading = false;
     }
   }
 
@@ -50,6 +61,7 @@ class ShopProvider with ChangeNotifier {
     try {
       final itemMaps = await _taskService.getShopItems();
       _items = itemMaps.map((map) => ShopItem.fromMap(map)).toList();
+      print('Loaded ${_items.length} shop items from database');
     } catch (e) {
       print('Error loading shop items: $e');
       _items = [];
@@ -310,25 +322,33 @@ class ShopProvider with ChangeNotifier {
   // 添加新商品
   Future<bool> addItem(ShopItem item) async {
     try {
+      print('Adding shop item: ${item.name}');
       await _taskService.addShopItem(item.toMap());
-      _items.add(item);
+      print('Shop item added to database: ${item.name}');
+      
+      // 重新加载商品列表
+      await _loadShopItems();
       notifyListeners();
+      
+      print('Shop item added successfully and list reloaded: ${item.name}');
       return true;
     } catch (e) {
       print('Error adding shop item: $e');
-      return false;
+      throw Exception('添加商品失败: ${e.toString()}');
     }
   }
 
   // 更新商品
   Future<bool> updateItem(ShopItem item) async {
     try {
+      print('Updating shop item: ${item.name}');
       await _taskService.updateShopItem(item.toMap());
-      final index = _items.indexWhere((i) => i.id == item.id);
-      if (index != -1) {
-        _items[index] = item;
-        notifyListeners();
-      }
+      
+      // 重新加载商品列表
+      await _loadShopItems();
+      notifyListeners();
+      
+      print('Shop item updated successfully: ${item.name}');
       return true;
     } catch (e) {
       print('Error updating shop item: $e');

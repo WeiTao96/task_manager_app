@@ -17,6 +17,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
   String _gold = '5';
   DateTime _dueDate = DateTime.now().add(Duration(days: 1));
   String _selectedCategory = '默认';
+  TaskRepeatType _selectedRepeatType = TaskRepeatType.special;
   bool _isLoading = false;
   List<String> _professionNames = ['默认'];
   
@@ -91,6 +92,37 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                         Expanded(
                           child: Text(
                             _selectedCategory,
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              // 任务类型选择
+              _buildSection(
+                title: '任务类型',
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: GestureDetector(
+                    onTap: _showRepeatTypeDialog,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getRepeatTypeIcon(_selectedRepeatType),
+                          color: _getRepeatTypeColor(_selectedRepeatType),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _selectedRepeatType.displayName,
                             style: TextStyle(fontSize: 16),
                           ),
                         ),
@@ -347,6 +379,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
         category: _selectedCategory,
         xp: int.tryParse(_xp) ?? 10,
         gold: int.tryParse(_gold) ?? 5,
+        repeatType: _selectedRepeatType,
       );
       
       await taskProvider.addTask(newTask);
@@ -375,6 +408,112 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // 显示重复类型选择对话框
+  void _showRepeatTypeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('选择任务类型'),
+          content: Container(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: TaskRepeatType.values.length,
+              itemBuilder: (context, index) {
+                final type = TaskRepeatType.values[index];
+                return ListTile(
+                  leading: Icon(
+                    _getRepeatTypeIcon(type),
+                    color: _getRepeatTypeColor(type),
+                  ),
+                  title: Text(type.displayName),
+                  subtitle: Text(_getRepeatTypeDescription(type)),
+                  trailing: _selectedRepeatType == type 
+                    ? Icon(Icons.check, color: Colors.blue) 
+                    : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedRepeatType = type;
+                      // 根据任务类型设置合适的截止日期
+                      _updateDueDateForRepeatType(type);
+                    });
+                    Navigator.of(context).pop();
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('取消'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 获取重复类型对应的图标
+  IconData _getRepeatTypeIcon(TaskRepeatType type) {
+    switch (type) {
+      case TaskRepeatType.daily:
+        return Icons.today;
+      case TaskRepeatType.weekly:
+        return Icons.date_range;
+      case TaskRepeatType.special:
+        return Icons.star;
+    }
+  }
+
+  // 获取重复类型对应的颜色
+  Color _getRepeatTypeColor(TaskRepeatType type) {
+    switch (type) {
+      case TaskRepeatType.daily:
+        return Colors.orange;
+      case TaskRepeatType.weekly:
+        return Colors.blue;
+      case TaskRepeatType.special:
+        return Colors.purple;
+    }
+  }
+
+  // 获取重复类型的描述
+  String _getRepeatTypeDescription(TaskRepeatType type) {
+    switch (type) {
+      case TaskRepeatType.daily:
+        return '每天重复，需要当天完成';
+      case TaskRepeatType.weekly:
+        return '每周重复，需要本周内完成';
+      case TaskRepeatType.special:
+        return '一次性任务，无重复要求';
+    }
+  }
+
+  // 根据重复类型更新截止日期
+  void _updateDueDateForRepeatType(TaskRepeatType type) {
+    final now = DateTime.now();
+    switch (type) {
+      case TaskRepeatType.daily:
+        // 每日任务设置为今天结束
+        _dueDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
+      case TaskRepeatType.weekly:
+        // 每周任务设置为本周日结束
+        final daysUntilSunday = 7 - now.weekday;
+        final nextSunday = now.add(Duration(days: daysUntilSunday));
+        _dueDate = DateTime(nextSunday.year, nextSunday.month, nextSunday.day, 23, 59, 59);
+        break;
+      case TaskRepeatType.special:
+        // 特殊任务保持用户选择的日期，或默认明天
+        if (_dueDate.isBefore(now)) {
+          _dueDate = now.add(Duration(days: 1));
+        }
+        break;
     }
   }
 }

@@ -20,10 +20,10 @@ class TaskService {
       String path = join(await getDatabasesPath(), 'tasks.db');
       print('Initializing database at: $path');
       
-      // bump DB version to 7 to add isRepeatable to shop_items
+      // bump DB version to 8 to add repeat task fields
       return await openDatabase(
         path, 
-        version: 7, 
+        version: 8, 
         onCreate: _createTables, 
         onUpgrade: _onUpgrade,
         // 简化数据库打开配置，避免PRAGMA问题
@@ -54,7 +54,10 @@ class TaskService {
         category TEXT NOT NULL,
         xp INTEGER DEFAULT 0,
         gold INTEGER DEFAULT 0,
-        professionId TEXT
+        professionId TEXT,
+        repeatType TEXT DEFAULT 'special',
+        lastCompletedDate TEXT,
+        originalTaskId TEXT
       )
     ''');
     
@@ -303,6 +306,27 @@ class TaskService {
       } catch (e) {
         print('Error adding isRepeatable column: $e');
         // 如果字段已存在，忽略错误
+      }
+    }
+    
+    if (oldVersion < 8) {
+      // 添加重复任务相关字段到 tasks 表
+      try {
+        await db.execute('ALTER TABLE tasks ADD COLUMN repeatType TEXT DEFAULT \'special\'');
+      } catch (e) {
+        print('Error adding repeatType column: $e');
+      }
+      
+      try {
+        await db.execute('ALTER TABLE tasks ADD COLUMN lastCompletedDate TEXT');
+      } catch (e) {
+        print('Error adding lastCompletedDate column: $e');
+      }
+      
+      try {
+        await db.execute('ALTER TABLE tasks ADD COLUMN originalTaskId TEXT');
+      } catch (e) {
+        print('Error adding originalTaskId column: $e');
       }
     }
   }

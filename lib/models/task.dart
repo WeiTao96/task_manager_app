@@ -1,3 +1,13 @@
+// 任务重复类型枚举
+enum TaskRepeatType {
+  special('特殊任务'),
+  daily('每日任务'), 
+  weekly('每周任务');
+
+  const TaskRepeatType(this.displayName);
+  final String displayName;
+}
+
 class Task {
   final String id;
   String title;
@@ -7,6 +17,9 @@ class Task {
   String category; // 现在直接使用职业名称作为分类
   int xp; // 经验值
   int gold; // 金币
+  TaskRepeatType repeatType; // 任务重复类型
+  DateTime? lastCompletedDate; // 上次完成日期
+  String? originalTaskId; // 原始任务ID（用于重复任务）
 
   Task({
     required this.id,
@@ -17,6 +30,9 @@ class Task {
     required this.category,
     this.xp = 0,
     this.gold = 0,
+    this.repeatType = TaskRepeatType.special,
+    this.lastCompletedDate,
+    this.originalTaskId,
   });
 
   // 转换为Map，用于持久化存储
@@ -30,11 +46,27 @@ class Task {
       'category': category,
       'xp': xp,
       'gold': gold,
+      'repeatType': repeatType.name,
+      'lastCompletedDate': lastCompletedDate?.toIso8601String(),
+      'originalTaskId': originalTaskId,
     };
   }
 
     // 从Map创建Task对象
   factory Task.fromMap(Map<String, dynamic> map) {
+    // 解析重复类型
+    TaskRepeatType repeatType = TaskRepeatType.special;
+    if (map.containsKey('repeatType') && map['repeatType'] != null) {
+      try {
+        repeatType = TaskRepeatType.values.firstWhere(
+          (type) => type.name == map['repeatType'],
+          orElse: () => TaskRepeatType.special,
+        );
+      } catch (e) {
+        repeatType = TaskRepeatType.special;
+      }
+    }
+
     return Task(
       id: map['id'],
       title: map['title'],
@@ -44,6 +76,11 @@ class Task {
       category: map['category'],
       xp: map.containsKey('xp') && map['xp'] != null ? (map['xp'] as int) : 0,
       gold: map.containsKey('gold') && map['gold'] != null ? (map['gold'] as int) : 0,
+      repeatType: repeatType,
+      lastCompletedDate: map['lastCompletedDate'] != null 
+        ? DateTime.parse(map['lastCompletedDate']) 
+        : null,
+      originalTaskId: map['originalTaskId'],
     );
   }
 }

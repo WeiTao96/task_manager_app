@@ -55,6 +55,9 @@ class TaskProvider with ChangeNotifier {
       // 清理不需要的系统任务（如商店消费任务）
       await _cleanupSystemTasks();
       
+      // 生成重复任务
+      await _generateRepeatTasks();
+      
       notifyListeners();
     } catch (e) {
       print('Error loading tasks: $e');
@@ -73,6 +76,165 @@ class TaskProvider with ChangeNotifier {
     } catch (e) {
       print('Error cleaning up system tasks: $e');
     }
+  }
+
+  // 生成重复任务
+  Future<void> _generateRepeatTasks() async {
+    try {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      
+      // 处理每日任务
+      await _generateDailyTasks(today);
+      
+      // 处理每周任务
+      await _generateWeeklyTasks(today);
+      
+      // 清理过期的重复任务
+      await _cleanupExpiredRepeatTasks(today);
+      
+    } catch (e) {
+      print('Error generating repeat tasks: $e');
+    }
+  }
+
+  // 生成每日任务
+  Future<void> _generateDailyTasks(DateTime today) async {
+    try {
+      // 找到所有每日任务模板（原始任务）
+      final dailyTemplates = _tasks.where((task) => 
+        task.repeatType == TaskRepeatType.daily && 
+        task.originalTaskId == null
+      ).toList();
+      
+      for (final template in dailyTemplates) {
+        // 检查今天是否已经有这个任务的实例
+        final hasToday = _tasks.any((task) => 
+          task.originalTaskId == template.id &&
+          _isSameDay(task.dueDate, today)
+        );
+        
+        if (!hasToday) {
+          // 创建今天的任务实例
+          final todayTask = Task(
+            id: '${template.id}_${today.millisecondsSinceEpoch}',
+            title: template.title,
+            description: template.description,
+            dueDate: DateTime(today.year, today.month, today.day, 23, 59, 59),
+            category: template.category,
+            xp: template.xp,
+            gold: template.gold,
+            repeatType: TaskRepeatType.daily,
+            originalTaskId: template.id,
+          );
+          
+          await _taskService.addTask(todayTask);
+          _tasks.add(todayTask);
+        }
+      }
+    } catch (e) {
+      print('Error generating daily tasks: $e');
+    }
+  }
+
+  // 生成每周任务
+  Future<void> _generateWeeklyTasks(DateTime today) async {
+    try {
+      // 获取本周的开始日期（周一）
+      final weekStart = today.subtract(Duration(days: today.weekday - 1));
+      
+      // 找到所有每周任务模板
+      final weeklyTemplates = _tasks.where((task) => 
+        task.repeatType == TaskRepeatType.weekly && 
+        task.originalTaskId == null
+      ).toList();
+      
+      for (final template in weeklyTemplates) {
+        // 检查本周是否已经有这个任务的实例
+        final hasThisWeek = _tasks.any((task) => 
+          task.originalTaskId == template.id &&
+          _isInSameWeek(task.dueDate, today)
+        );
+        
+        if (!hasThisWeek) {
+          // 创建本周的任务实例（截止日期为周日）
+          final weekEnd = weekStart.add(Duration(days: 6));
+          final thisWeekTask = Task(
+            id: '${template.id}_week_${weekStart.millisecondsSinceEpoch}',
+            title: template.title,
+            description: template.description,
+            dueDate: DateTime(weekEnd.year, weekEnd.month, weekEnd.day, 23, 59, 59),
+            category: template.category,
+            xp: template.xp,
+            gold: template.gold,
+            repeatType: TaskRepeatType.weekly,
+            originalTaskId: template.id,
+          );
+          
+          await _taskService.addTask(thisWeekTask);
+          _tasks.add(thisWeekTask);
+        }
+      }
+    } catch (e) {
+      print('Error generating weekly tasks: $e');
+    }
+  }
+
+  // 清理过期的重复任务
+  Future<void> _cleanupExpiredRepeatTasks(DateTime today) async {
+    try {
+      final expiredTasks = <Task>[];
+      
+      for (final task in _tasks) {
+        if (task.originalTaskId != null) { // 这是一个重复任务实例
+          bool shouldRemove = false;
+          
+          if (task.repeatType == TaskRepeatType.daily) {
+            // 清理昨天及之前的未完成每日任务
+            if (task.dueDate.isBefore(today) && !task.isCompleted) {
+              shouldRemove = true;
+            }
+          } else if (task.repeatType == TaskRepeatType.weekly) {
+            // 清理上周及之前的未完成每周任务
+            if (!_isInSameWeek(task.dueDate, today) && 
+                task.dueDate.isBefore(today) && 
+                !task.isCompleted) {
+              shouldRemove = true;
+            }
+          }
+          
+          if (shouldRemove) {
+            expiredTasks.add(task);
+          }
+        }
+      }
+      
+      // 删除过期任务
+      for (final task in expiredTasks) {
+        await _taskService.deleteTask(task.id);
+        _tasks.remove(task);
+      }
+      
+      if (expiredTasks.isNotEmpty) {
+        print('Cleaned up ${expiredTasks.length} expired repeat tasks');
+      }
+    } catch (e) {
+      print('Error cleaning up expired repeat tasks: $e');
+    }
+  }
+
+  // 检查两个日期是否是同一天
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+           date1.month == date2.month &&
+           date1.day == date2.day;
+  }
+
+  // 检查两个日期是否在同一周
+  bool _isInSameWeek(DateTime date1, DateTime date2) {
+    final startOfWeek1 = date1.subtract(Duration(days: date1.weekday - 1));
+    final startOfWeek2 = date2.subtract(Duration(days: date2.weekday - 1));
+    return _isSameDay(startOfWeek1, startOfWeek2);
   }
 
   Future<void> addTask(Task task) async {
@@ -109,30 +271,35 @@ class TaskProvider with ChangeNotifier {
     final wasCompleted = task.isCompleted;
     task.isCompleted = !task.isCompleted;
     
-    // 如果任务刚完成且分类是职业名称，给职业添加经验
-    if (!wasCompleted && task.isCompleted && _professionProvider != null) {
-      // 应用商店增益效果
-      double expMultiplier = 1.0;
-      if (_shopProvider != null) {
-        expMultiplier = _shopProvider!.getExpMultiplier();
-      }
+    // 如果任务刚完成，记录完成时间
+    if (!wasCompleted && task.isCompleted) {
+      task.lastCompletedDate = DateTime.now();
       
-      final finalExp = (task.xp * expMultiplier).round();
-      
-      // 通过职业名称查找职业
-      try {
-        final profession = _professionProvider!.professions.firstWhere(
-          (prof) => prof.name == task.category,
-        );
-        await _professionProvider!.addExperienceToProfession(profession.id, finalExp);
-        
-        // 如果应用了增益，显示额外获得的经验
-        if (expMultiplier > 1.0) {
-          final bonusExp = finalExp - task.xp;
-          print('经验药水生效！额外获得 $bonusExp 经验！');
+      // 如果分类是职业名称，给职业添加经验
+      if (_professionProvider != null) {
+        // 应用商店增益效果
+        double expMultiplier = 1.0;
+        if (_shopProvider != null) {
+          expMultiplier = _shopProvider!.getExpMultiplier();
         }
-      } catch (e) {
-        // 如果没找到对应职业，说明是默认分类，不做任何操作
+        
+        final finalExp = (task.xp * expMultiplier).round();
+        
+        // 通过职业名称查找职业
+        try {
+          final profession = _professionProvider!.professions.firstWhere(
+            (prof) => prof.name == task.category,
+          );
+          await _professionProvider!.addExperienceToProfession(profession.id, finalExp);
+          
+          // 如果应用了增益，显示额外获得的经验
+          if (expMultiplier > 1.0) {
+            final bonusExp = finalExp - task.xp;
+            print('经验药水生效！额外获得 $bonusExp 经验！');
+          }
+        } catch (e) {
+          // 如果没找到对应职业，说明是默认分类，不做任何操作
+        }
       }
     }
     

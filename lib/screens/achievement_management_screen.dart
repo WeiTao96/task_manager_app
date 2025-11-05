@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/achievement_provider.dart';
 import '../providers/profession_provider.dart';
 import '../models/achievement.dart';
+import '../models/task.dart';
 import '../widgets/achievement_card.dart';
 
 class AchievementManagementScreen extends StatefulWidget {
@@ -168,6 +169,7 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
   String _icon = '🏆';
   AchievementType _type = AchievementType.special;
   ConditionType _conditionType = ConditionType.taskCount;
+  TaskDifficulty _targetDifficulty = TaskDifficulty.medium; // 新增难度选择
   int _targetValue = 1;
   int _rewardXp = 50;
   int _rewardGold = 10;
@@ -249,8 +251,41 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
                     onChanged: (value) => setState(() => _conditionType = value!),
                   ),
                   SizedBox(height: 16),
+                  
+                  // 当条件类型是"完成指定难度任务"时，显示难度选择器
+                  if (_conditionType == ConditionType.difficultyTasks) ...[
+                    DropdownButtonFormField<TaskDifficulty>(
+                      value: _targetDifficulty,
+                      decoration: InputDecoration(
+                        labelText: '目标任务难度',
+                        helperText: '选择需要完成的任务难度',
+                      ),
+                      items: TaskDifficulty.values.map((difficulty) {
+                        return DropdownMenuItem(
+                          value: difficulty,
+                          child: Row(
+                            children: [
+                              Icon(
+                                _getDifficultyIcon(difficulty),
+                                color: difficulty.color,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(difficulty.displayName),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) => setState(() => _targetDifficulty = value!),
+                    ),
+                    SizedBox(height: 16),
+                  ],
+                  
                   TextFormField(
-                    decoration: InputDecoration(labelText: '目标数值'),
+                    decoration: InputDecoration(
+                      labelText: _getTargetValueLabel(),
+                      helperText: _getTargetValueHelper(),
+                    ),
                     keyboardType: TextInputType.number,
                     initialValue: _targetValue.toString(),
                     validator: (value) {
@@ -423,6 +458,54 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
     );
   }
 
+  // 获取难度对应的图标
+  IconData _getDifficultyIcon(TaskDifficulty difficulty) {
+    switch (difficulty) {
+      case TaskDifficulty.low:
+        return Icons.keyboard_arrow_down;
+      case TaskDifficulty.medium:
+        return Icons.remove;
+      case TaskDifficulty.high:
+        return Icons.keyboard_arrow_up;
+    }
+  }
+
+  // 根据条件类型获取目标数值标签
+  String _getTargetValueLabel() {
+    switch (_conditionType) {
+      case ConditionType.taskCount:
+        return '目标任务数量';
+      case ConditionType.experienceGained:
+        return '目标经验值';
+      case ConditionType.goldEarned:
+        return '目标金币数量';
+      case ConditionType.streakDays:
+        return '连续天数';
+      case ConditionType.difficultyTasks:
+        return '目标任务数量';
+      case ConditionType.professionLevel:
+        return '目标职业等级';
+    }
+  }
+
+  // 根据条件类型获取目标数值帮助文本
+  String _getTargetValueHelper() {
+    switch (_conditionType) {
+      case ConditionType.taskCount:
+        return '需要完成的任务总数';
+      case ConditionType.experienceGained:
+        return '需要获得的经验值总数';
+      case ConditionType.goldEarned:
+        return '需要获得的金币总数';
+      case ConditionType.streakDays:
+        return '需要连续完成任务的天数';
+      case ConditionType.difficultyTasks:
+        return '需要完成的${_targetDifficulty.displayName}难度任务数量';
+      case ConditionType.professionLevel:
+        return '职业需要达到的等级';
+    }
+  }
+
   void _saveAchievement() async {
     if (_formKey.currentState?.validate() != true) return;
 
@@ -436,6 +519,7 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
       type: _type,
       conditionType: _conditionType,
       targetValue: _targetValue,
+      targetDifficulty: _conditionType == ConditionType.difficultyTasks ? _targetDifficulty : null,
       rewardXp: _rewardXp,
       rewardGold: _rewardGold,
       color: _color,

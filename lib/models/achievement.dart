@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'task.dart';
 
 // 成就类型枚举
 enum AchievementType {
@@ -36,6 +37,7 @@ class Achievement {
   String? professionName; // 职业名称，用于显示
   ConditionType conditionType;
   int targetValue; // 目标值
+  TaskDifficulty? targetDifficulty; // 目标难度（仅对difficultyTasks条件有效）
   int currentValue; // 当前进度
   bool isUnlocked; // 是否已解锁
   DateTime? unlockedDate; // 解锁时间
@@ -54,6 +56,7 @@ class Achievement {
     this.professionName,
     required this.conditionType,
     required this.targetValue,
+    this.targetDifficulty,
     this.currentValue = 0,
     this.isUnlocked = false,
     this.unlockedDate,
@@ -81,12 +84,13 @@ class Achievement {
       'professionName': professionName,
       'conditionType': conditionType.name,
       'targetValue': targetValue,
+      'targetDifficulty': targetDifficulty?.name,
       'currentValue': currentValue,
       'isUnlocked': isUnlocked ? 1 : 0,
       'unlockedDate': unlockedDate?.toIso8601String(),
       'rewardXp': rewardXp,
       'rewardGold': rewardGold,
-      'color': color.value.toRadixString(16),
+      'color': color.value.toRadixString(16).substring(2),
       'isCustom': isCustom ? 1 : 0,
     };
   }
@@ -115,6 +119,18 @@ class Achievement {
       conditionType = ConditionType.taskCount;
     }
 
+    // 解析目标难度
+    TaskDifficulty? targetDifficulty;
+    if (map.containsKey('targetDifficulty') && map['targetDifficulty'] != null) {
+      try {
+        targetDifficulty = TaskDifficulty.values.firstWhere(
+          (d) => d.name == map['targetDifficulty'],
+        );
+      } catch (e) {
+        targetDifficulty = null;
+      }
+    }
+
     return Achievement(
       id: map['id'],
       title: map['title'],
@@ -125,6 +141,7 @@ class Achievement {
       professionName: map['professionName'],
       conditionType: conditionType,
       targetValue: map['targetValue'],
+      targetDifficulty: targetDifficulty,
       currentValue: map['currentValue'] ?? 0,
       isUnlocked: map['isUnlocked'] == 1,
       unlockedDate: map['unlockedDate'] != null 
@@ -132,12 +149,12 @@ class Achievement {
         : null,
       rewardXp: map['rewardXp'] ?? 0,
       rewardGold: map['rewardGold'] ?? 0,
-      color: Color(int.parse(map['color'] ?? 'ffFFC107', radix: 16)),
+      color: Color(int.parse('ff${map['color'] ?? 'FFC107'}', radix: 16)),
       isCustom: map['isCustom'] == 1,
     );
   }
 
-  // 创建副本
+    // 创建副本
   Achievement copyWith({
     String? id,
     String? title,
@@ -148,6 +165,7 @@ class Achievement {
     String? professionName,
     ConditionType? conditionType,
     int? targetValue,
+    TaskDifficulty? targetDifficulty,
     int? currentValue,
     bool? isUnlocked,
     DateTime? unlockedDate,
@@ -166,6 +184,7 @@ class Achievement {
       professionName: professionName ?? this.professionName,
       conditionType: conditionType ?? this.conditionType,
       targetValue: targetValue ?? this.targetValue,
+      targetDifficulty: targetDifficulty ?? this.targetDifficulty,
       currentValue: currentValue ?? this.currentValue,
       isUnlocked: isUnlocked ?? this.isUnlocked,
       unlockedDate: unlockedDate ?? this.unlockedDate,

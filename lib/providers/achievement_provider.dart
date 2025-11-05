@@ -236,8 +236,8 @@ class AchievementProvider with ChangeNotifier {
           newValue = currentStreak ?? 0;
           break;
         case ConditionType.difficultyTasks:
-          if (difficultyTaskCounts != null) {
-            newValue = difficultyTaskCounts[TaskDifficulty.high] ?? 0;
+          if (difficultyTaskCounts != null && achievement.targetDifficulty != null) {
+            newValue = difficultyTaskCounts[achievement.targetDifficulty!] ?? 0;
           }
           break;
         case ConditionType.professionLevel:

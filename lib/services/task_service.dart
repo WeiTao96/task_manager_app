@@ -20,10 +20,10 @@ class TaskService {
       String path = join(await getDatabasesPath(), 'tasks.db');
       print('Initializing database at: $path');
       
-      // bump DB version to 8 to add repeat task fields
+      // bump DB version to 9 to add difficulty field
       return await openDatabase(
         path, 
-        version: 8, 
+        version: 9, 
         onCreate: _createTables, 
         onUpgrade: _onUpgrade,
         // 简化数据库打开配置，避免PRAGMA问题
@@ -56,6 +56,7 @@ class TaskService {
         gold INTEGER DEFAULT 0,
         professionId TEXT,
         repeatType TEXT DEFAULT 'special',
+        difficulty TEXT DEFAULT 'medium',
         lastCompletedDate TEXT,
         originalTaskId TEXT
       )
@@ -327,6 +328,15 @@ class TaskService {
         await db.execute('ALTER TABLE tasks ADD COLUMN originalTaskId TEXT');
       } catch (e) {
         print('Error adding originalTaskId column: $e');
+      }
+    }
+    
+    if (oldVersion < 9) {
+      // 添加难度字段到 tasks 表
+      try {
+        await db.execute('ALTER TABLE tasks ADD COLUMN difficulty TEXT DEFAULT \'medium\'');
+      } catch (e) {
+        print('Error adding difficulty column: $e');
       }
     }
   }

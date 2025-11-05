@@ -125,6 +125,7 @@ class TaskProvider with ChangeNotifier {
             xp: template.xp,
             gold: template.gold,
             repeatType: TaskRepeatType.daily,
+            difficulty: template.difficulty,
             originalTaskId: template.id,
           );
           
@@ -168,6 +169,7 @@ class TaskProvider with ChangeNotifier {
             xp: template.xp,
             gold: template.gold,
             repeatType: TaskRepeatType.weekly,
+            difficulty: template.difficulty,
             originalTaskId: template.id,
           );
           

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 // 任务重复类型枚举
 enum TaskRepeatType {
   special('特殊任务'),
@@ -6,6 +8,28 @@ enum TaskRepeatType {
 
   const TaskRepeatType(this.displayName);
   final String displayName;
+}
+
+// 任务难度枚举
+enum TaskDifficulty {
+  low('低'),
+  medium('中'),
+  high('高');
+
+  const TaskDifficulty(this.displayName);
+  final String displayName;
+  
+  // 获取难度对应的颜色
+  Color get color {
+    switch (this) {
+      case TaskDifficulty.low:
+        return Colors.green;
+      case TaskDifficulty.medium:
+        return Colors.orange;
+      case TaskDifficulty.high:
+        return Colors.red;
+    }
+  }
 }
 
 class Task {
@@ -18,6 +42,7 @@ class Task {
   int xp; // 经验值
   int gold; // 金币
   TaskRepeatType repeatType; // 任务重复类型
+  TaskDifficulty difficulty; // 任务难度
   DateTime? lastCompletedDate; // 上次完成日期
   String? originalTaskId; // 原始任务ID（用于重复任务）
 
@@ -31,6 +56,7 @@ class Task {
     this.xp = 0,
     this.gold = 0,
     this.repeatType = TaskRepeatType.special,
+    this.difficulty = TaskDifficulty.medium,
     this.lastCompletedDate,
     this.originalTaskId,
   });
@@ -47,6 +73,7 @@ class Task {
       'xp': xp,
       'gold': gold,
       'repeatType': repeatType.name,
+      'difficulty': difficulty.name,
       'lastCompletedDate': lastCompletedDate?.toIso8601String(),
       'originalTaskId': originalTaskId,
     };
@@ -67,6 +94,19 @@ class Task {
       }
     }
 
+    // 解析难度
+    TaskDifficulty difficulty = TaskDifficulty.medium;
+    if (map.containsKey('difficulty') && map['difficulty'] != null) {
+      try {
+        difficulty = TaskDifficulty.values.firstWhere(
+          (diff) => diff.name == map['difficulty'],
+          orElse: () => TaskDifficulty.medium,
+        );
+      } catch (e) {
+        difficulty = TaskDifficulty.medium;
+      }
+    }
+
     return Task(
       id: map['id'],
       title: map['title'],
@@ -77,6 +117,7 @@ class Task {
       xp: map.containsKey('xp') && map['xp'] != null ? (map['xp'] as int) : 0,
       gold: map.containsKey('gold') && map['gold'] != null ? (map['gold'] as int) : 0,
       repeatType: repeatType,
+      difficulty: difficulty,
       lastCompletedDate: map['lastCompletedDate'] != null 
         ? DateTime.parse(map['lastCompletedDate']) 
         : null,

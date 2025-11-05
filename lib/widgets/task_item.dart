@@ -13,77 +13,127 @@ class TaskItem extends StatelessWidget {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       elevation: 2,
-      child: ListTile(
-        leading: Checkbox(
-          value: task.isCompleted,
-          onChanged: (value) {
-            Provider.of<TaskProvider>(context, listen: false)
-                .toggleTaskCompletion(task.id);
-          },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: task.difficulty.color,
+          width: 3,
         ),
-        title: Text(
-          task.title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            decoration: task.isCompleted 
-                ? TextDecoration.lineThrough 
-                : TextDecoration.none,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border(
+            left: BorderSide(
+              color: task.difficulty.color,
+              width: 6,
+            ),
           ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (task.description.isNotEmpty) ...[
-              SizedBox(height: 4),
-              Text(
-                task.description,
-                style: TextStyle(fontSize: 14),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 14,
-                  color: Colors.grey,
-                ),
-                SizedBox(width: 4),
+        child: ListTile(
+          leading: Checkbox(
+            value: task.isCompleted,
+            onChanged: (value) {
+              Provider.of<TaskProvider>(context, listen: false)
+                  .toggleTaskCompletion(task.id);
+            },
+          ),
+          title: Text(
+            task.title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              decoration: task.isCompleted 
+                  ? TextDecoration.lineThrough 
+                  : TextDecoration.none,
+            ),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (task.description.isNotEmpty) ...[
+                SizedBox(height: 4),
                 Text(
-                  '${task.dueDate.year}-${task.dueDate.month.toString().padLeft(2, '0')}-${task.dueDate.day.toString().padLeft(2, '0')}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                SizedBox(width: 12),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _getCategoryColor(task.category),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    task.category,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white,
-                    ),
-                  ),
+                  task.description,
+                  style: TextStyle(fontSize: 14),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: Icon(Icons.delete_outline, color: Colors.red),
-          onPressed: () {
-            _showDeleteDialog(context, task.id);
+              SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    '${task.dueDate.year}-${task.dueDate.month.toString().padLeft(2, '0')}-${task.dueDate.day.toString().padLeft(2, '0')}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  SizedBox(width: 12),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getCategoryColor(task.category),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      task.category,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  // 难度指示器
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: task.difficulty.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: task.difficulty.color,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getDifficultyIcon(task.difficulty),
+                          size: 12,
+                          color: task.difficulty.color,
+                        ),
+                        SizedBox(width: 2),
+                        Text(
+                          task.difficulty.displayName,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: task.difficulty.color,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          trailing: IconButton(
+            icon: Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: () {
+              _showDeleteDialog(context, task.id);
+            },
+          ),
+          onTap: () {
+            _navigateToEditTask(context, task);
           },
         ),
-        onTap: () {
-          _navigateToEditTask(context, task);
-        },
       ),
     );
   }
@@ -100,6 +150,18 @@ class TaskItem extends StatelessWidget {
         return Colors.purple;
       default:
         return Colors.grey;
+    }
+  }
+
+  // 获取难度对应的图标
+  IconData _getDifficultyIcon(TaskDifficulty difficulty) {
+    switch (difficulty) {
+      case TaskDifficulty.low:
+        return Icons.keyboard_arrow_down;
+      case TaskDifficulty.medium:
+        return Icons.remove;
+      case TaskDifficulty.high:
+        return Icons.keyboard_arrow_up;
     }
   }
   

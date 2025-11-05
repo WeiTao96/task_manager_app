@@ -18,6 +18,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
   DateTime _dueDate = DateTime.now().add(Duration(days: 1));
   String _selectedCategory = '默认';
   TaskRepeatType _selectedRepeatType = TaskRepeatType.special;
+  TaskDifficulty _selectedDifficulty = TaskDifficulty.medium;
   bool _isLoading = false;
   List<String> _professionNames = ['默认'];
   
@@ -123,6 +124,37 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                         Expanded(
                           child: Text(
                             _selectedRepeatType.displayName,
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              // 任务难度选择
+              _buildSection(
+                title: '任务难度',
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: GestureDetector(
+                    onTap: _showDifficultyDialog,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getDifficultyIcon(_selectedDifficulty),
+                          color: _selectedDifficulty.color,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _selectedDifficulty.displayName,
                             style: TextStyle(fontSize: 16),
                           ),
                         ),
@@ -380,6 +412,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
         xp: int.tryParse(_xp) ?? 10,
         gold: int.tryParse(_gold) ?? 5,
         repeatType: _selectedRepeatType,
+        difficulty: _selectedDifficulty,
       );
       
       await taskProvider.addTask(newTask);
@@ -408,6 +441,75 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // 显示难度选择对话框
+  void _showDifficultyDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('选择任务难度'),
+          content: Container(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: TaskDifficulty.values.length,
+              itemBuilder: (context, index) {
+                final difficulty = TaskDifficulty.values[index];
+                return ListTile(
+                  leading: Icon(
+                    _getDifficultyIcon(difficulty),
+                    color: difficulty.color,
+                  ),
+                  title: Text(difficulty.displayName),
+                  subtitle: Text(_getDifficultyDescription(difficulty)),
+                  trailing: _selectedDifficulty == difficulty 
+                    ? Icon(Icons.check, color: Colors.blue) 
+                    : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedDifficulty = difficulty;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('取消'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 获取难度对应的图标
+  IconData _getDifficultyIcon(TaskDifficulty difficulty) {
+    switch (difficulty) {
+      case TaskDifficulty.low:
+        return Icons.keyboard_arrow_down;
+      case TaskDifficulty.medium:
+        return Icons.remove;
+      case TaskDifficulty.high:
+        return Icons.keyboard_arrow_up;
+    }
+  }
+
+  // 获取难度的描述
+  String _getDifficultyDescription(TaskDifficulty difficulty) {
+    switch (difficulty) {
+      case TaskDifficulty.low:
+        return '简单任务，轻松完成';
+      case TaskDifficulty.medium:
+        return '中等难度，需要一定努力';
+      case TaskDifficulty.high:
+        return '困难任务，需要全力以赴';
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'dart:convert';
 import '../models/task.dart';
 import '../models/profession.dart';
+import '../models/achievement.dart';
 
 class TaskService {
   static Database? _database;
@@ -20,10 +21,10 @@ class TaskService {
       String path = join(await getDatabasesPath(), 'tasks.db');
       print('Initializing database at: $path');
       
-      // bump DB version to 9 to add difficulty field
+      // bump DB version to 10 to add achievements table
       return await openDatabase(
         path, 
-        version: 9, 
+        version: 10, 
         onCreate: _createTables, 
         onUpgrade: _onUpgrade,
         // 简化数据库打开配置，避免PRAGMA问题
@@ -118,6 +119,28 @@ class TaskService {
         isRepeatable INTEGER DEFAULT 1,
         createdBy TEXT DEFAULT 'user',
         createdTime TEXT NOT NULL
+      )
+    ''');
+
+    // 成就表
+    await db.execute('''
+      CREATE TABLE achievements(
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        icon TEXT DEFAULT '🏆',
+        type TEXT NOT NULL,
+        professionId TEXT,
+        professionName TEXT,
+        conditionType TEXT NOT NULL,
+        targetValue INTEGER NOT NULL,
+        currentValue INTEGER DEFAULT 0,
+        isUnlocked INTEGER DEFAULT 0,
+        unlockedDate TEXT,
+        rewardXp INTEGER DEFAULT 0,
+        rewardGold INTEGER DEFAULT 0,
+        color INTEGER NOT NULL,
+        isCustom INTEGER DEFAULT 0
       )
     ''');
   }
@@ -337,6 +360,34 @@ class TaskService {
         await db.execute('ALTER TABLE tasks ADD COLUMN difficulty TEXT DEFAULT \'medium\'');
       } catch (e) {
         print('Error adding difficulty column: $e');
+      }
+    }
+    
+    if (oldVersion < 10) {
+      // 创建成就表
+      try {
+        await db.execute('''
+          CREATE TABLE achievements(
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            icon TEXT DEFAULT '🏆',
+            type TEXT NOT NULL,
+            professionId TEXT,
+            professionName TEXT,
+            conditionType TEXT NOT NULL,
+            targetValue INTEGER NOT NULL,
+            currentValue INTEGER DEFAULT 0,
+            isUnlocked INTEGER DEFAULT 0,
+            unlockedDate TEXT,
+            rewardXp INTEGER DEFAULT 0,
+            rewardGold INTEGER DEFAULT 0,
+            color TEXT NOT NULL,
+            isCustom INTEGER DEFAULT 0
+          )
+        ''');
+      } catch (e) {
+        print('Error creating achievements table: $e');
       }
     }
   }
@@ -620,5 +671,79 @@ class TaskService {
       where: 'id = ?',
       whereArgs: [itemId],
     );
+  }
+
+  // === 成就系统相关操作 ===
+  
+  // 添加成就
+  Future<void> addAchievement(Achievement achievement) async {
+    final db = await database;
+    await db.insert(
+      'achievements',
+      achievement.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // 获取所有成就
+  Future<List<Achievement>> getAchievements() async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query('achievements');
+      return List.generate(maps.length, (i) {
+        try {
+          return Achievement.fromMap(maps[i]);
+        } catch (e) {
+          print('Error parsing achievement at index $i: $e');
+          return null;
+        }
+      }).where((achievement) => achievement != null).cast<Achievement>().toList();
+    } catch (e) {
+      print('Error getting achievements: $e');
+      return [];
+    }
+  }
+
+  // 更新成就
+  Future<void> updateAchievement(Achievement achievement) async {
+    final db = await database;
+    await db.update(
+      'achievements',
+      achievement.toMap(),
+      where: 'id = ?',
+      whereArgs: [achievement.id],
+    );
+  }
+
+  // 删除成就
+  Future<void> deleteAchievement(String id) async {
+    final db = await database;
+    await db.delete(
+      'achievements',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // 根据职业获取成就
+  Future<List<Achievement>> getAchievementsByProfession(String? professionId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'achievements',
+      where: professionId != null ? 'professionId = ?' : 'professionId IS NULL',
+      whereArgs: professionId != null ? [professionId] : null,
+    );
+    return List.generate(maps.length, (i) => Achievement.fromMap(maps[i]));
+  }
+
+  // 获取已解锁的成就
+  Future<List<Achievement>> getUnlockedAchievements() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'achievements',
+      where: 'isUnlocked = ?',
+      whereArgs: [1],
+    );
+    return List.generate(maps.length, (i) => Achievement.fromMap(maps[i]));
   }
 }

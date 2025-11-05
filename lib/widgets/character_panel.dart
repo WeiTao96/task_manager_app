@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
+import '../screens/profile_screen.dart';
 
 class CharacterPanel extends StatelessWidget {
   final String characterName;
@@ -50,12 +51,17 @@ class CharacterPanel extends StatelessWidget {
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 34,
-              backgroundColor: Colors.orange[200],
-              child: Text(
-                'L$level',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, ProfileScreen.routeName);
+              },
+              child: CircleAvatar(
+                radius: 34,
+                backgroundColor: Colors.orange[200],
+                child: Text(
+                  'L$level',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
               ),
             ),
             SizedBox(width: 12),

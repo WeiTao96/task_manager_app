@@ -3,12 +3,14 @@ import '../models/task.dart';
 import '../services/task_service.dart';
 import 'profession_provider.dart';
 import 'shop_provider.dart';
+import 'achievement_provider.dart';
 
 class TaskProvider with ChangeNotifier {
   List<Task> _tasks = [];
   String _filter = 'all'; // all, completed, pending
   ProfessionProvider? _professionProvider; // 职业提供者引用
   ShopProvider? _shopProvider; // 商店提供者引用
+  AchievementProvider? _achievementProvider; // 成就提供者引用
   bool _isLoading = false; // 防止重复加载
 
   List<Task> get tasks {
@@ -39,6 +41,11 @@ class TaskProvider with ChangeNotifier {
   // 设置商店提供者引用
   void setShopProvider(ShopProvider shopProvider) {
     _shopProvider = shopProvider;
+  }
+  
+  // 设置成就提供者引用
+  void setAchievementProvider(AchievementProvider achievementProvider) {
+    _achievementProvider = achievementProvider;
   }
 
   Future<void> loadTasks() async {
@@ -303,9 +310,38 @@ class TaskProvider with ChangeNotifier {
           // 如果没找到对应职业，说明是默认分类，不做任何操作
         }
       }
+      
+      // 检查成就进度
+      if (_achievementProvider != null) {
+        await _checkAchievements(task);
+      }
     }
     
     await updateTask(task);
+  }
+  
+  // 检查成就进度
+  Future<void> _checkAchievements(Task recentlyCompletedTask) async {
+    if (_achievementProvider == null) return;
+    
+    final completedTasks = _tasks.where((t) => t.isCompleted).toList();
+    
+    // 计算每个难度的任务完成数量
+    final difficultyTaskCounts = <TaskDifficulty, int>{};
+    for (final difficulty in TaskDifficulty.values) {
+      difficultyTaskCounts[difficulty] = completedTasks
+          .where((t) => t.difficulty == difficulty)
+          .length;
+    }
+    
+    await _achievementProvider!.checkAchievements(
+      completedTasks: completedTasks,
+      totalExperience: totalExp,
+      totalGold: totalGold,
+      currentStreak: 0, // TODO: 实现连续天数计算
+      difficultyTaskCounts: difficultyTaskCounts,
+      recentlyCompletedTask: recentlyCompletedTask,
+    );
   }
 
   // total experience from completed tasks

@@ -213,6 +213,7 @@ class AchievementProvider with ChangeNotifier {
     int? totalGold,
     int? currentStreak,
     Map<TaskDifficulty, int>? difficultyTaskCounts,
+    Task? recentlyCompletedTask,
   }) async {
     bool hasUpdates = false;
     List<Achievement> newlyUnlocked = [];
@@ -238,6 +239,20 @@ class AchievementProvider with ChangeNotifier {
         case ConditionType.difficultyTasks:
           if (difficultyTaskCounts != null && achievement.targetDifficulty != null) {
             newValue = difficultyTaskCounts[achievement.targetDifficulty!] ?? 0;
+          }
+          break;
+        case ConditionType.specificTask:
+          if (recentlyCompletedTask != null && 
+              achievement.targetTaskId != null &&
+              recentlyCompletedTask.id == achievement.targetTaskId) {
+            newValue = 1; // 特定任务完成后设为1（已完成）
+          } else {
+            // 检查历史完成的任务中是否包含目标任务
+            if (completedTasks != null && achievement.targetTaskId != null) {
+              final hasCompletedTarget = completedTasks
+                .any((task) => task.id == achievement.targetTaskId);
+              newValue = hasCompletedTarget ? 1 : 0;
+            }
           }
           break;
         case ConditionType.professionLevel:

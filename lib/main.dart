@@ -31,11 +31,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => ProfessionProvider()),
         ChangeNotifierProvider(create: (context) => ShopProvider()),
         ChangeNotifierProvider(create: (context) => AchievementProvider()),
-        ChangeNotifierProxyProvider2<ProfessionProvider, ShopProvider, TaskProvider>(
+        ChangeNotifierProxyProvider3<ProfessionProvider, ShopProvider, AchievementProvider, TaskProvider>(
           create: (context) => TaskProvider(),
-          update: (context, professionProvider, shopProvider, taskProvider) {
+          update: (context, professionProvider, shopProvider, achievementProvider, taskProvider) {
             taskProvider?.setProfessionProvider(professionProvider);
             taskProvider?.setShopProvider(shopProvider);
+            taskProvider?.setAchievementProvider(achievementProvider);
             return taskProvider!;
           },
         ),

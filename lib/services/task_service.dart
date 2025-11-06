@@ -21,10 +21,10 @@ class TaskService {
       String path = join(await getDatabasesPath(), 'tasks.db');
       print('Initializing database at: $path');
       
-      // bump DB version to 11 to add targetDifficulty field to achievements
+      // bump DB version to 12 to add targetTaskId and targetTaskTitle fields to achievements
       return await openDatabase(
         path, 
-        version: 11, 
+        version: 12, 
         onCreate: _createTables, 
         onUpgrade: _onUpgrade,
         // 简化数据库打开配置，避免PRAGMA问题
@@ -135,6 +135,8 @@ class TaskService {
         conditionType TEXT NOT NULL,
         targetValue INTEGER NOT NULL,
         targetDifficulty TEXT,
+        targetTaskId TEXT,
+        targetTaskTitle TEXT,
         currentValue INTEGER DEFAULT 0,
         isUnlocked INTEGER DEFAULT 0,
         unlockedDate TEXT,
@@ -398,6 +400,21 @@ class TaskService {
         await db.execute('ALTER TABLE achievements ADD COLUMN targetDifficulty TEXT');
       } catch (e) {
         print('Error adding targetDifficulty column: $e');
+      }
+    }
+    
+    if (oldVersion < 12) {
+      // 添加targetTaskId和targetTaskTitle字段到achievements表
+      try {
+        await db.execute('ALTER TABLE achievements ADD COLUMN targetTaskId TEXT');
+      } catch (e) {
+        print('Error adding targetTaskId column: $e');
+      }
+      
+      try {
+        await db.execute('ALTER TABLE achievements ADD COLUMN targetTaskTitle TEXT');
+      } catch (e) {
+        print('Error adding targetTaskTitle column: $e');
       }
     }
   }

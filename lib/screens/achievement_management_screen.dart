@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/achievement_provider.dart';
 import '../providers/profession_provider.dart';
+import '../providers/task_provider.dart';
 import '../models/achievement.dart';
 import '../models/task.dart';
 import '../widgets/achievement_card.dart';
@@ -170,12 +171,24 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
   AchievementType _type = AchievementType.special;
   ConditionType _conditionType = ConditionType.taskCount;
   TaskDifficulty _targetDifficulty = TaskDifficulty.medium; // 新增难度选择
+  String? _selectedTaskId; // 新增：选中的任务ID
+  String? _selectedTaskTitle; // 新增：选中的任务标题
   int _targetValue = 1;
   int _rewardXp = 50;
   int _rewardGold = 10;
   Color _color = Colors.amber;
   String? _selectedProfessionId;
   String? _selectedProfessionName;
+
+  @override
+  void initState() {
+    super.initState();
+    // 确保任务列表已加载
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      taskProvider.loadTasks();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,38 +261,25 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
                         child: Text(type.displayName),
                       );
                     }).toList(),
-                    onChanged: (value) => setState(() => _conditionType = value!),
+                    onChanged: (value) => setState(() {
+                      _conditionType = value!;
+                      // 切换条件类型时清空相关选择
+                      if (_conditionType != ConditionType.specificTask) {
+                        _selectedTaskId = null;
+                        _selectedTaskTitle = null;
+                      }
+                      if (_conditionType != ConditionType.difficultyTasks) {
+                        _targetDifficulty = TaskDifficulty.medium;
+                      }
+                    }),
                   ),
                   SizedBox(height: 16),
                   
-                  // 当条件类型是"完成指定难度任务"时，显示难度选择器
-                  if (_conditionType == ConditionType.difficultyTasks) ...[
-                    DropdownButtonFormField<TaskDifficulty>(
-                      value: _targetDifficulty,
-                      decoration: InputDecoration(
-                        labelText: '目标任务难度',
-                        helperText: '选择需要完成的任务难度',
-                      ),
-                      items: TaskDifficulty.values.map((difficulty) {
-                        return DropdownMenuItem(
-                          value: difficulty,
-                          child: Row(
-                            children: [
-                              Icon(
-                                _getDifficultyIcon(difficulty),
-                                color: difficulty.color,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(difficulty.displayName),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (value) => setState(() => _targetDifficulty = value!),
-                    ),
-                    SizedBox(height: 16),
-                  ],
+                  // 难度选择器
+                  _buildDifficultySelector(),
+                  
+                  // 任务选择器  
+                  _buildTaskSelector(),
                   
                   TextFormField(
                     decoration: InputDecoration(
@@ -288,13 +288,15 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
                     ),
                     keyboardType: TextInputType.number,
                     initialValue: _targetValue.toString(),
+                    enabled: _conditionType != ConditionType.specificTask, // 特定任务时禁用编辑
                     validator: (value) {
+                      if (_conditionType == ConditionType.specificTask) return null; // 特定任务不需要验证目标值
                       if (value?.isEmpty == true) return '请输入目标数值';
                       if (int.tryParse(value!) == null) return '请输入有效数字';
                       if (int.parse(value) <= 0) return '目标数值必须大于0';
                       return null;
                     },
-                    onSaved: (value) => _targetValue = int.parse(value!),
+                    onSaved: (value) => _targetValue = _conditionType == ConditionType.specificTask ? 1 : int.parse(value!),
                   ),
                 ],
               ),
@@ -469,6 +471,162 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
         return Icons.keyboard_arrow_up;
     }
   }
+  
+  // 构建难度选择器
+  Widget _buildDifficultySelector() {
+    if (_conditionType != ConditionType.difficultyTasks) {
+      return SizedBox.shrink(); // 不显示时返回空组件
+    }
+    
+    return Column(
+      children: [
+        DropdownButtonFormField<TaskDifficulty>(
+          value: _targetDifficulty,
+          decoration: InputDecoration(
+            labelText: '目标任务难度',
+            helperText: '选择需要完成的任务难度',
+          ),
+          items: TaskDifficulty.values.map((difficulty) {
+            return DropdownMenuItem(
+              value: difficulty,
+              child: Row(
+                children: [
+                  Icon(
+                    _getDifficultyIcon(difficulty),
+                    color: difficulty.color,
+                    size: 20,
+                  ),
+                  SizedBox(width: 8),
+                  Text(difficulty.displayName),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (value) => setState(() => _targetDifficulty = value!),
+        ),
+        SizedBox(height: 16),
+      ],
+    );
+  }
+  
+  // 构建任务选择器
+  Widget _buildTaskSelector() {
+    if (_conditionType != ConditionType.specificTask) {
+      return SizedBox.shrink(); // 不显示时返回空组件
+    }
+    
+    return Column(
+      children: [
+        Consumer<TaskProvider>(
+          builder: (context, taskProvider, child) {
+            final allTasks = taskProvider.tasks;
+            
+            // 如果任务列表为空，显示提示
+            if (allTasks.isEmpty) {
+              return Card(
+                margin: EdgeInsets.only(bottom: 16),
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.grey[600], size: 32),
+                      SizedBox(height: 8),
+                      Text(
+                        '暂无可用任务',
+                        style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '请先创建一些任务',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '选择目标任务',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.purple,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      value: _selectedTaskId,
+                      hint: Text('请选择任务', style: TextStyle(color: Colors.grey)),
+                      isExpanded: true,
+                      items: allTasks.map((task) {
+                        return DropdownMenuItem<String?>(
+                          value: task.id,
+                          child: Row(
+                            children: [
+                              Icon(
+                                _getDifficultyIcon(task.difficulty),
+                                color: task.difficulty.color,
+                                size: 16,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  task.title,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedTaskId = value;
+                          if (value != null && allTasks.isNotEmpty) {
+                            try {
+                              final selectedTask = allTasks.firstWhere((t) => t.id == value);
+                              _selectedTaskTitle = selectedTask.title;
+                              _targetValue = 1; // 特定任务的目标值固定为1
+                            } catch (e) {
+                              print('找不到任务: $value');
+                              _selectedTaskTitle = null;
+                            }
+                          } else {
+                            _selectedTaskTitle = null;
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '选择需要完成的特定任务',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 16),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
 
   // 根据条件类型获取目标数值标签
   String _getTargetValueLabel() {
@@ -483,6 +641,8 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
         return '连续天数';
       case ConditionType.difficultyTasks:
         return '目标任务数量';
+      case ConditionType.specificTask:
+        return '任务完成状态';
       case ConditionType.professionLevel:
         return '目标职业等级';
     }
@@ -501,6 +661,8 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
         return '需要连续完成任务的天数';
       case ConditionType.difficultyTasks:
         return '需要完成的${_targetDifficulty.displayName}难度任务数量';
+      case ConditionType.specificTask:
+        return '完成指定的任务（自动设为1）';
       case ConditionType.professionLevel:
         return '职业需要达到的等级';
     }
@@ -508,6 +670,14 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
 
   void _saveAchievement() async {
     if (_formKey.currentState?.validate() != true) return;
+
+    // 额外验证：特定任务条件必须选择任务
+    if (_conditionType == ConditionType.specificTask && _selectedTaskId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('请选择目标任务'), backgroundColor: Colors.red),
+      );
+      return;
+    }
 
     _formKey.currentState?.save();
 
@@ -520,6 +690,8 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
       conditionType: _conditionType,
       targetValue: _targetValue,
       targetDifficulty: _conditionType == ConditionType.difficultyTasks ? _targetDifficulty : null,
+      targetTaskId: _conditionType == ConditionType.specificTask ? _selectedTaskId : null,
+      targetTaskTitle: _conditionType == ConditionType.specificTask ? _selectedTaskTitle : null,
       rewardXp: _rewardXp,
       rewardGold: _rewardGold,
       color: _color,

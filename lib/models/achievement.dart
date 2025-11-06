@@ -21,6 +21,7 @@ enum ConditionType {
   streakDays('连续天数'),
   professionLevel('职业等级'),
   difficultyTasks('完成指定难度任务'),
+  specificTask('完成特定任务'),
   goldEarned('获得金币');
 
   const ConditionType(this.displayName);
@@ -38,6 +39,8 @@ class Achievement {
   ConditionType conditionType;
   int targetValue; // 目标值
   TaskDifficulty? targetDifficulty; // 目标难度（仅对difficultyTasks条件有效）
+  String? targetTaskId; // 目标任务ID（仅对specificTask条件有效）
+  String? targetTaskTitle; // 目标任务标题（用于显示）
   int currentValue; // 当前进度
   bool isUnlocked; // 是否已解锁
   DateTime? unlockedDate; // 解锁时间
@@ -57,6 +60,8 @@ class Achievement {
     required this.conditionType,
     required this.targetValue,
     this.targetDifficulty,
+    this.targetTaskId,
+    this.targetTaskTitle,
     this.currentValue = 0,
     this.isUnlocked = false,
     this.unlockedDate,
@@ -85,6 +90,8 @@ class Achievement {
       'conditionType': conditionType.name,
       'targetValue': targetValue,
       'targetDifficulty': targetDifficulty?.name,
+      'targetTaskId': targetTaskId,
+      'targetTaskTitle': targetTaskTitle,
       'currentValue': currentValue,
       'isUnlocked': isUnlocked ? 1 : 0,
       'unlockedDate': unlockedDate?.toIso8601String(),
@@ -142,6 +149,8 @@ class Achievement {
       conditionType: conditionType,
       targetValue: map['targetValue'],
       targetDifficulty: targetDifficulty,
+      targetTaskId: map['targetTaskId'],
+      targetTaskTitle: map['targetTaskTitle'],
       currentValue: map['currentValue'] ?? 0,
       isUnlocked: map['isUnlocked'] == 1,
       unlockedDate: map['unlockedDate'] != null 
@@ -166,6 +175,8 @@ class Achievement {
     ConditionType? conditionType,
     int? targetValue,
     TaskDifficulty? targetDifficulty,
+    String? targetTaskId,
+    String? targetTaskTitle,
     int? currentValue,
     bool? isUnlocked,
     DateTime? unlockedDate,
@@ -185,6 +196,8 @@ class Achievement {
       conditionType: conditionType ?? this.conditionType,
       targetValue: targetValue ?? this.targetValue,
       targetDifficulty: targetDifficulty ?? this.targetDifficulty,
+      targetTaskId: targetTaskId ?? this.targetTaskId,
+      targetTaskTitle: targetTaskTitle ?? this.targetTaskTitle,
       currentValue: currentValue ?? this.currentValue,
       isUnlocked: isUnlocked ?? this.isUnlocked,
       unlockedDate: unlockedDate ?? this.unlockedDate,

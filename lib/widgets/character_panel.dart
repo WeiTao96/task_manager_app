@@ -6,7 +6,7 @@ import '../screens/profile_screen.dart';
 
 class CharacterPanel extends StatelessWidget {
   final String characterName;
-  const CharacterPanel({Key? key, this.characterName = '罗伟韬'}) : super(key: key);
+  const CharacterPanel({Key? key, this.characterName = '成长探索者'}) : super(key: key);
 
   // 每一级需要的经验值（按附件的公式：round(pow(level * 100, 1.2)))）
   int requiredForLevel(int level) {

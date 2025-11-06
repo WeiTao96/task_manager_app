@@ -47,6 +47,8 @@ class TaskItem extends StatelessWidget {
                   ? TextDecoration.lineThrough 
                   : TextDecoration.none,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,13 +71,16 @@ class TaskItem extends StatelessWidget {
                     color: Colors.grey,
                   ),
                   SizedBox(width: 4),
-                  Text(
-                    '${task.dueDate.year}-${task.dueDate.month.toString().padLeft(2, '0')}-${task.dueDate.day.toString().padLeft(2, '0')}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  Flexible(
+                    child: Text(
+                      '${task.dueDate.year}-${task.dueDate.month.toString().padLeft(2, '0')}-${task.dueDate.day.toString().padLeft(2, '0')}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  SizedBox(width: 12),
+                  SizedBox(width: 8),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: _getCategoryColor(task.category),
                       borderRadius: BorderRadius.circular(12),
@@ -88,10 +93,10 @@ class TaskItem extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(width: 8),
+                  SizedBox(width: 6),
                   // 难度指示器
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: BoxDecoration(
                       color: task.difficulty.color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
@@ -105,14 +110,14 @@ class TaskItem extends StatelessWidget {
                       children: [
                         Icon(
                           _getDifficultyIcon(task.difficulty),
-                          size: 12,
+                          size: 10,
                           color: task.difficulty.color,
                         ),
                         SizedBox(width: 2),
                         Text(
                           task.difficulty.displayName,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 9,
                             color: task.difficulty.color,
                             fontWeight: FontWeight.bold,
                           ),

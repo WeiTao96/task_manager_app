@@ -520,9 +520,11 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
         Consumer<TaskProvider>(
           builder: (context, taskProvider, child) {
             final allTasks = taskProvider.tasks;
+            // 过滤掉已完成的任务，只显示未完成的任务
+            final availableTasks = allTasks.where((task) => !task.isCompleted).toList();
             
             // 如果任务列表为空，显示提示
-            if (allTasks.isEmpty) {
+            if (availableTasks.isEmpty) {
               return Card(
                 margin: EdgeInsets.only(bottom: 16),
                 child: Padding(
@@ -532,12 +534,12 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
                       Icon(Icons.info_outline, color: Colors.grey[600], size: 32),
                       SizedBox(height: 8),
                       Text(
-                        '暂无可用任务',
+                        allTasks.isEmpty ? '暂无可用任务' : '暂无未完成的任务',
                         style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 4),
                       Text(
-                        '请先创建一些任务',
+                        allTasks.isEmpty ? '请先创建一些任务' : '所有任务都已完成，请创建新任务或重置已完成的任务',
                         style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ],
@@ -570,7 +572,7 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
                       value: _selectedTaskId,
                       hint: Text('请选择任务', style: TextStyle(color: Colors.grey)),
                       isExpanded: true,
-                      items: allTasks.map((task) {
+                      items: availableTasks.map((task) {
                         return DropdownMenuItem<String?>(
                           value: task.id,
                           child: Row(
@@ -594,9 +596,9 @@ class _AddAchievementScreenState extends State<AddAchievementScreen> {
                       onChanged: (value) {
                         setState(() {
                           _selectedTaskId = value;
-                          if (value != null && allTasks.isNotEmpty) {
+                          if (value != null && availableTasks.isNotEmpty) {
                             try {
-                              final selectedTask = allTasks.firstWhere((t) => t.id == value);
+                              final selectedTask = availableTasks.firstWhere((t) => t.id == value);
                               _selectedTaskTitle = selectedTask.title;
                               _targetValue = 1; // 特定任务的目标值固定为1
                             } catch (e) {

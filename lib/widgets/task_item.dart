@@ -10,19 +10,32 @@ class TaskItem extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
       margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
+        gradient: LinearGradient(
+          colors: task.isCompleted 
+              ? [Color(0xFF1A1A2E).withOpacity(0.3), Color(0xFF048A81).withOpacity(0.3)]
+              : [Colors.white, Color(0xFFF5F5F5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
           color: task.difficulty.color,
           width: 3,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: task.difficulty.color.withOpacity(0.3),
+            blurRadius: 4,
+            offset: Offset(2, 2),
+          ),
+        ],
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           border: Border(
             left: BorderSide(
               color: task.difficulty.color,
@@ -30,114 +43,276 @@ class TaskItem extends StatelessWidget {
             ),
           ),
         ),
-        child: ListTile(
-          leading: Checkbox(
-            value: task.isCompleted,
-            onChanged: (value) {
-              Provider.of<TaskProvider>(context, listen: false)
-                  .toggleTaskCompletion(task.id);
-            },
-          ),
-          title: Text(
-            task.title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              decoration: task.isCompleted 
-                  ? TextDecoration.lineThrough 
-                  : TextDecoration.none,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: Row(
             children: [
-              if (task.description.isNotEmpty) ...[
-                SizedBox(height: 4),
-                Text(
-                  task.description,
-                  style: TextStyle(fontSize: 14),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 14,
-                    color: Colors.grey,
+              // 像素风格复选框
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: task.isCompleted ? Color(0xFF048A81) : Color(0xFF2E4057),
+                    width: 2,
                   ),
-                  SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      '${task.dueDate.year}-${task.dueDate.month.toString().padLeft(2, '0')}-${task.dueDate.day.toString().padLeft(2, '0')}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                  color: task.isCompleted ? Color(0xFF048A81) : Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 2,
+                      offset: Offset(1, 1),
+                    ),
+                  ],
+                ),
+                child: InkWell(
+                  onTap: () {
+                    Provider.of<TaskProvider>(context, listen: false)
+                        .toggleTaskCompletion(task.id);
+                  },
+                  child: task.isCompleted
+                      ? Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+              ),
+              
+              SizedBox(width: 12),
+              
+              // 任务内容
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 任务标题
+                    Text(
+                      task.title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                        color: task.isCompleted ? Color(0xFF2E4057).withOpacity(0.6) : Color(0xFF1A1A2E),
+                        decoration: task.isCompleted 
+                            ? TextDecoration.lineThrough 
+                            : TextDecoration.none,
+                        shadows: task.isCompleted ? null : [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.1),
+                            offset: Offset(1, 1),
+                            blurRadius: 1,
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  SizedBox(width: 8),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _getCategoryColor(task.category),
-                      borderRadius: BorderRadius.circular(12),
+                    
+                    // 任务描述
+                    if (task.description.isNotEmpty) ...[
+                      SizedBox(height: 4),
+                      Text(
+                        task.description,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          color: Color(0xFF2E4057).withOpacity(0.8),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    
+                    SizedBox(height: 6),
+                    
+                    // 任务信息栏
+                    Row(
+                      children: [
+                        // 日期
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF2E4057).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Color(0xFF2E4057).withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 10,
+                                color: Color(0xFF2E4057),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                '${task.dueDate.month.toString().padLeft(2, '0')}-${task.dueDate.day.toString().padLeft(2, '0')}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontFamily: 'monospace',
+                                  color: Color(0xFF2E4057),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        SizedBox(width: 6),
+                        
+                        // 类别
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getCategoryColor(task.category),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.white, width: 1),
+                          ),
+                          child: Text(
+                            task.category,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'monospace',
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        
+                        SizedBox(width: 6),
+                        
+                        // 难度指示器
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: task.difficulty.color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: task.difficulty.color, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getDifficultyIcon(task.difficulty),
+                                size: 10,
+                                color: task.difficulty.color,
+                              ),
+                              SizedBox(width: 2),
+                              Text(
+                                task.difficulty.displayName,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontFamily: 'monospace',
+                                  color: task.difficulty.color,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        Spacer(),
+                        
+                        // 经验和金币奖励
+                        if (task.xp > 0 || task.gold > 0) ...[
+                          Row(
+                            children: [
+                              if (task.xp > 0) ...[
+                                Icon(Icons.star, size: 12, color: Color(0xFF048A81)),
+                                Text(
+                                  '${task.xp}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontFamily: 'monospace',
+                                    color: Color(0xFF048A81),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                              ],
+                              if (task.gold > 0) ...[
+                                Icon(Icons.monetization_on, size: 12, color: Color(0xFFFFD23F)),
+                                Text(
+                                  '${task.gold}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontFamily: 'monospace',
+                                    color: Color(0xFFFFD23F),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
-                    child: Text(
-                      task.category,
-                      style: TextStyle(
-                        fontSize: 10,
+                  ],
+                ),
+              ),
+              
+              // 操作按钮
+              Column(
+                children: [
+                  // 编辑按钮
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF048A81),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.white, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 2,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    child: InkWell(
+                      onTap: () => _navigateToEditTask(context, task),
+                      child: Icon(
+                        Icons.edit,
+                        size: 16,
                         color: Colors.white,
                       ),
                     ),
                   ),
-                  SizedBox(width: 6),
-                  // 难度指示器
+                  
+                  SizedBox(height: 6),
+                  
+                  // 删除按钮
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      color: task.difficulty.color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: task.difficulty.color,
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getDifficultyIcon(task.difficulty),
-                          size: 10,
-                          color: task.difficulty.color,
-                        ),
-                        SizedBox(width: 2),
-                        Text(
-                          task.difficulty.displayName,
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: task.difficulty.color,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      color: Color(0xFFFF6B35),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.white, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 2,
+                          offset: Offset(1, 1),
                         ),
                       ],
+                    ),
+                    child: InkWell(
+                      onTap: () => _showDeleteDialog(context, task.id),
+                      child: Icon(
+                        Icons.delete,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
             ],
           ),
-          trailing: IconButton(
-            icon: Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () {
-              _showDeleteDialog(context, task.id);
-            },
-          ),
-          onTap: () {
-            _navigateToEditTask(context, task);
-          },
         ),
       ),
     );

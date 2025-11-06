@@ -41,26 +41,80 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFF5F5F5), // 浅色背景
       appBar: AppBar(
-        title: Text('个人成长RPG系统',
-          style: TextStyle(fontWeight: FontWeight.bold,color: Colors.white),
-        ),
-        backgroundColor: Colors.blue[700],
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.shopping_bag),
-            onPressed: () {
-              Navigator.of(context).pushNamed(ShopScreen.routeName);
-            },
-            tooltip: '商店',
+        title: Text(
+          '⚔️ 个人成长RPG系统 ⚔️',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontFamily: 'monospace',
+            fontSize: 18,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.7),
+                offset: Offset(2, 2),
+                blurRadius: 4,
+              ),
+            ],
           ),
-          IconButton(
-            icon: Icon(Icons.work),
-            onPressed: () {
-              Navigator.of(context).pushNamed(ProfessionScreen.routeName);
-            },
-            tooltip: '职业系统',
+        ),
+        backgroundColor: Color(0xFF2E4057),
+        elevation: 4,
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF2E4057), Color(0xFF048A81)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        actions: [
+          // 商店按钮
+          Container(
+            margin: EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Color(0xFFFFD23F), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: Offset(2, 2),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: Icon(Icons.shopping_bag, color: Color(0xFFFFD23F)),
+              onPressed: () {
+                Navigator.of(context).pushNamed(ShopScreen.routeName);
+              },
+              tooltip: '🛒 商店',
+            ),
+          ),
+          // 职业系统按钮
+          Container(
+            margin: EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Color(0xFFFF6B35), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: Offset(2, 2),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: Icon(Icons.work, color: Color(0xFFFF6B35)),
+              onPressed: () {
+                Navigator.of(context).pushNamed(ProfessionScreen.routeName);
+              },
+              tooltip: '⚒️ 职业系统',
+            ),
           ),
         ],
       ),
@@ -69,8 +123,8 @@ class _HomeScreenState extends State<HomeScreen> {
           // 角色面板（显示等级/经验/金币）
           CharacterPanel(),
           // 宝箱卡片
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             child: Consumer<TaskProvider>(
               builder: (context, taskProvider, child) {
                 final canOpen = taskProvider.canOpenTreasure;
@@ -97,10 +151,36 @@ class _HomeScreenState extends State<HomeScreen> {
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: Text('宝箱已开启 🎉'),
-                        content: Text('获得经验：$xp\n获得金币：$gold'),
+                        backgroundColor: Color(0xFF2E4057),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Color(0xFFFFD23F), width: 2),
+                        ),
+                        title: Text(
+                          '🎉 宝箱已开启 🎉',
+                          style: TextStyle(
+                            color: Color(0xFFFFD23F),
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: Text(
+                          '获得经验：$xp EXP\n获得金币：$gold GOLD',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'monospace',
+                            fontSize: 16,
+                          ),
+                        ),
                         actions: [
-                          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text('确定'))
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF048A81),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: Text('确定', style: TextStyle(fontFamily: 'monospace')),
+                          ),
                         ],
                       ),
                     );
@@ -112,21 +192,128 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed = null;
                 }
                 
-                return Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.card_giftcard, 
-                      color: canOpen ? Colors.deepPurple : Colors.grey
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: canOpen 
+                          ? [Color(0xFFFFD23F), Color(0xFFFF6B35)]
+                          : [Color(0xFF9E9E9E), Color(0xFF757575)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    title: Text('宝箱系统'),
-                    subtitle: Text(subtitle),
-                    trailing: ElevatedButton(
-                      onPressed: onPressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: canOpen ? null : Colors.grey,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: canOpen ? Color(0xFF2E4057) : Color(0xFF616161),
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: Offset(0, 4),
                       ),
-                      child: Text(buttonText),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        // 宝箱图标
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: canOpen ? Color(0xFF2E4057) : Colors.grey[600],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: Offset(2, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            canOpen ? Icons.card_giftcard : Icons.lock,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                        
+                        SizedBox(width: 12),
+                        
+                        // 宝箱信息
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '🏆 每日宝箱',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontFamily: 'monospace',
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.7),
+                                      offset: Offset(1, 1),
+                                      blurRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                subtitle,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontFamily: 'monospace',
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // 开启按钮
+                        Container(
+                          decoration: BoxDecoration(
+                            color: onPressed != null ? Color(0xFF048A81) : Colors.grey[600],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: onPressed != null ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: Offset(2, 2),
+                              ),
+                            ] : null,
+                          ),
+                          child: ElevatedButton(
+                            onPressed: onPressed,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            child: Text(
+                              buttonText,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );

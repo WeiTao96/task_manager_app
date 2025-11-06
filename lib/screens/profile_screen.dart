@@ -137,7 +137,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     ),
                     SizedBox(height: 8),
                     Text(
-                      '已注册 ${DateTime.now().difference(DateTime(2024, 1, 1)).inDays} 天',
+                      taskProvider.tasks.isNotEmpty 
+                        ? '已创建 ${taskProvider.tasks.length} 个任务'
+                        : '开始你的任务管理之旅',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.white70,

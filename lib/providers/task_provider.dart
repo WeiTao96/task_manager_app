@@ -12,6 +12,7 @@ class TaskProvider with ChangeNotifier {
   ShopProvider? _shopProvider; // 商店提供者引用
   AchievementProvider? _achievementProvider; // 成就提供者引用
   bool _isLoading = false; // 防止重复加载
+  int _spentGold = 0; // 非持久化：记录已消费的金币，用于在商店购买时减少显示的金币
 
   List<Task> get tasks {
     switch (_filter) {
@@ -64,6 +65,9 @@ class TaskProvider with ChangeNotifier {
       
       // 生成重复任务
       await _generateRepeatTasks();
+      
+  // 从 purchase_records 聚合已消费的金币并更新（持久化恢复）
+  await _loadSpentFromPurchaseRecords();
       
       notifyListeners();
     } catch (e) {
@@ -351,7 +355,22 @@ class TaskProvider with ChangeNotifier {
 
   // total gold from completed tasks
   int get totalGold {
-    return _tasks.where((t) => t.isCompleted).fold(0, (sum, t) => sum + (t.gold));
+    final earned = _tasks.where((t) => t.isCompleted).fold(0, (sum, t) => sum + (t.gold));
+    final current = earned - _spentGold;
+    return current < 0 ? 0 : current;
+  }
+
+  // 从数据库中的 purchase_records 表聚合已消费金币
+  Future<void> _loadSpentFromPurchaseRecords() async {
+    try {
+      final records = await _taskService.getPurchaseHistory();
+      // getPurchaseHistory 已经按 userId = 'current_user' 过滤
+      final spent = records.fold<int>(0, (sum, r) => sum + ((r['pricePaid'] as int?) ?? 0));
+      _spentGold = spent;
+      notifyListeners();
+    } catch (e) {
+      print('Error loading spent gold from purchase_records: $e');
+    }
   }
 
   // 获取今日完成的任务数量（不包括奖励任务）
@@ -410,12 +429,9 @@ class TaskProvider with ChangeNotifier {
 
   // 更新用户金币（用于商店消费）
   Future<void> updateGold(int newGoldAmount) async {
-    // 直接更新金币总量，不创建交易记录
-    // 商店消费应该通过ShopProvider的购买记录来跟踪，而不是任务系统
-    
-    // 如果需要记录金币变化，应该在ShopProvider中处理
-    // 这里只负责更新金币数量
-    notifyListeners();
+    // 购买操作已经在 ShopProvider 中写入 purchase_records 表，
+    // 这里重新从数据库聚合已消费金额以保证数据一致性
+    await _loadSpentFromPurchaseRecords();
   }
 
   // 删除特定标题的任务（用于清理不需要的系统任务）

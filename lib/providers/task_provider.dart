@@ -727,6 +727,15 @@ class TaskProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>> exportUserData() async {
+    return await _taskService.exportUserData();
+  }
+
+  Future<void> importUserData(Map<String, dynamic> data) async {
+    await _taskService.importUserData(data);
+    await loadTasks();
+  }
+
   // 添加一次性奖励（宝箱或活动奖励）并标记为已完成以便计入总经验/金币
   Future<void> addReward({
     required int xp,

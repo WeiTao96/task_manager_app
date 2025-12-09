@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/achievement_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/profession_provider.dart';
+import '../providers/shop_provider.dart';
 import '../models/task.dart';
 import '../widgets/achievement_card.dart';
 import 'achievement_management_screen.dart';
@@ -289,6 +293,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                   ],
+
+                  SizedBox(height: 24),
+
+                  _buildBackupSection(),
                 ],
               ),
             );
@@ -324,6 +332,216 @@ class _ProfileScreenState extends State<ProfileScreen>
           Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         ],
       ),
+    );
+  }
+
+  Widget _buildBackupSection() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '数据备份与迁移',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '导出全部用户数据以备份，或导入之前的备份恢复进度。',
+              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showExportDialog(),
+                    icon: Icon(Icons.file_download),
+                    label: Text('导出 JSON'),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showImportDialog(),
+                    icon: Icon(Icons.file_upload),
+                    label: Text('导入 JSON'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.indigo,
+                      side: BorderSide(color: Colors.indigo),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              '提示：导入前请先备份，导入操作会覆盖当前数据。',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showExportDialog() async {
+    try {
+      final exportData = await context.read<TaskProvider>().exportUserData();
+      final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
+
+      if (!mounted) return;
+
+      await showDialog(
+        context: context,
+        builder: (ctx) {
+          return AlertDialog(
+            title: Text('导出数据'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(child: SelectableText(jsonString)),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: jsonString));
+                  if (!mounted) return;
+                  Navigator.of(ctx).pop();
+                  _showSnack('数据已复制到剪贴板');
+                },
+                child: Text('复制到剪贴板'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('关闭'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      _showError('导出失败：$e');
+    }
+  }
+
+  Future<void> _showImportDialog() async {
+    final controller = TextEditingController();
+    bool isProcessing = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return AlertDialog(
+              title: Text('导入数据'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '粘贴之前导出的 JSON 数据以恢复任务、职业、成就和商店信息。',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                    ),
+                    SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      maxLines: 10,
+                      enabled: !isProcessing,
+                      decoration: InputDecoration(
+                        labelText: 'JSON 数据',
+                        hintText: '{ ... }',
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isProcessing
+                      ? null
+                      : () => Navigator.of(ctx).pop(),
+                  child: Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: isProcessing
+                      ? null
+                      : () async {
+                          final text = controller.text.trim();
+                          if (text.isEmpty) {
+                            _showError('请输入要导入的 JSON 数据');
+                            return;
+                          }
+
+                          setStateDialog(() => isProcessing = true);
+
+                          try {
+                            final decoded = jsonDecode(text);
+                            if (decoded is! Map<String, dynamic>) {
+                              throw const FormatException('JSON 格式不正确');
+                            }
+
+                            final data = Map<String, dynamic>.from(decoded);
+
+                            await context.read<TaskProvider>().importUserData(
+                              data,
+                            );
+                            await context
+                                .read<ProfessionProvider>()
+                                .loadProfessions();
+                            await context
+                                .read<AchievementProvider>()
+                                .loadAchievements();
+                            await context.read<ShopProvider>().initializeShop();
+
+                            if (!mounted) return;
+
+                            Navigator.of(ctx).pop();
+                            _showSnack('数据导入成功');
+                          } catch (error) {
+                            setStateDialog(() => isProcessing = false);
+                            _showError('导入失败：$error');
+                          }
+                        },
+                  child: isProcessing
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text('开始导入'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
     );
   }
 

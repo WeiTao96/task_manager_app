@@ -812,4 +812,93 @@ class TaskService {
     );
     return List.generate(maps.length, (i) => Achievement.fromMap(maps[i]));
   }
+
+  // === 数据导出 / 导入 ===
+
+  Future<Map<String, dynamic>> exportUserData() async {
+    final db = await database;
+
+    final tables = <String, dynamic>{
+      'tasks': await db.query('tasks'),
+      'professions': await db.query('professions'),
+      'achievements': await db.query('achievements'),
+      'shop_items': await db.query('shop_items'),
+      'purchase_records': await db.query('purchase_records'),
+      'user_inventory': await db.query('user_inventory'),
+      'active_boosts': await db.query('active_boosts'),
+    };
+
+    return {
+      'version': 1,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'tables': tables,
+    };
+  }
+
+  Future<void> importUserData(Map<String, dynamic> backup) async {
+    if (backup.isEmpty) {
+      return;
+    }
+
+    final db = await database;
+
+    final Map<String, dynamic> tableData;
+    if (backup['tables'] is Map<String, dynamic>) {
+      tableData = Map<String, dynamic>.from(backup['tables']);
+    } else {
+      tableData = Map<String, dynamic>.from(backup);
+      tableData.remove('version');
+      tableData.remove('exportedAt');
+    }
+
+    await db.transaction((txn) async {
+      Future<void> insertAll(String table, List<dynamic>? rows) async {
+        if (rows == null) return;
+        for (final row in rows) {
+          final map = Map<String, dynamic>.from(row as Map);
+          if (table == 'purchase_records' ||
+              table == 'user_inventory' ||
+              table == 'active_boosts') {
+            map['userId'] = 'current_user';
+          }
+          await txn.insert(
+            table,
+            map,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+
+      await txn.delete('tasks');
+      await txn.delete('professions');
+      await txn.delete('achievements');
+      await txn.delete('shop_items');
+      await txn.delete('purchase_records');
+      await txn.delete('user_inventory');
+      await txn.delete('active_boosts');
+
+      await insertAll('tasks', tableData['tasks'] as List<dynamic>?);
+      await insertAll(
+        'professions',
+        tableData['professions'] as List<dynamic>?,
+      );
+      await insertAll(
+        'achievements',
+        tableData['achievements'] as List<dynamic>?,
+      );
+      await insertAll('shop_items', tableData['shop_items'] as List<dynamic>?);
+      await insertAll(
+        'purchase_records',
+        tableData['purchase_records'] as List<dynamic>?,
+      );
+      await insertAll(
+        'user_inventory',
+        tableData['user_inventory'] as List<dynamic>?,
+      );
+      await insertAll(
+        'active_boosts',
+        tableData['active_boosts'] as List<dynamic>?,
+      );
+    });
+  }
 }

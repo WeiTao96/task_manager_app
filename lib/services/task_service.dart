@@ -20,19 +20,19 @@ class TaskService {
     try {
       String path = join(await getDatabasesPath(), 'tasks.db');
       print('Initializing database at: $path');
-      
+
       // bump DB version to 12 to add targetTaskId and targetTaskTitle fields to achievements
       return await openDatabase(
-        path, 
-        version: 12, 
-        onCreate: _createTables, 
+        path,
+        version: 12,
+        onCreate: _createTables,
         onUpgrade: _onUpgrade,
         // 简化数据库打开配置，避免PRAGMA问题
         onOpen: (db) async {
           print('Database opened successfully');
         },
       ).timeout(
-        Duration(seconds: 15), 
+        Duration(seconds: 15),
         onTimeout: () {
           print('Database initialization timeout');
           throw Exception('Database initialization timeout');
@@ -62,7 +62,7 @@ class TaskService {
         originalTaskId TEXT
       )
     ''');
-    
+
     await db.execute('''
       CREATE TABLE professions(
         id TEXT PRIMARY KEY,
@@ -74,7 +74,7 @@ class TaskService {
         experience INTEGER DEFAULT 0
       )
     ''');
-    
+
     // 商店相关表
     await db.execute('''
       CREATE TABLE purchase_records(
@@ -87,7 +87,7 @@ class TaskService {
         isActive INTEGER DEFAULT 1
       )
     ''');
-    
+
     await db.execute('''
       CREATE TABLE user_inventory(
         id TEXT PRIMARY KEY,
@@ -96,7 +96,7 @@ class TaskService {
         acquiredTime TEXT NOT NULL
       )
     ''');
-    
+
     await db.execute('''
       CREATE TABLE active_boosts(
         id TEXT PRIMARY KEY,
@@ -162,14 +162,14 @@ class TaskService {
         // ignore if already exists
       }
     }
-    
+
     if (oldVersion < 3) {
       try {
         await db.execute('ALTER TABLE tasks ADD COLUMN professionId TEXT');
       } catch (e) {
         // ignore if already exists
       }
-      
+
       try {
         await db.execute('''
           CREATE TABLE professions(
@@ -186,7 +186,7 @@ class TaskService {
         // ignore if already exists
       }
     }
-    
+
     if (oldVersion < 4) {
       // 添加商店相关表
       try {
@@ -204,7 +204,7 @@ class TaskService {
       } catch (e) {
         // ignore if already exists
       }
-      
+
       try {
         await db.execute('''
           CREATE TABLE user_inventory(
@@ -217,7 +217,7 @@ class TaskService {
       } catch (e) {
         // ignore if already exists
       }
-      
+
       try {
         await db.execute('''
           CREATE TABLE active_boosts(
@@ -250,7 +250,7 @@ class TaskService {
         // ignore if already exists
       }
     }
-    
+
     if (oldVersion < 5) {
       // 删除商品分类字段，创建新表并迁移数据
       try {
@@ -270,17 +270,17 @@ class TaskService {
             createdTime TEXT NOT NULL
           )
         ''');
-        
+
         // 复制现有数据（排除category字段）
         await db.execute('''
           INSERT INTO shop_items_new (id, name, description, icon, price, type, effect, isLimited, limitedUntil, createdBy, createdTime)
           SELECT id, name, description, icon, price, type, effect, isLimited, limitedUntil, createdBy, createdTime
           FROM shop_items
         ''');
-        
+
         // 删除旧表
         await db.execute('DROP TABLE shop_items');
-        
+
         // 重命名新表
         await db.execute('ALTER TABLE shop_items_new RENAME TO shop_items');
       } catch (e) {
@@ -288,7 +288,7 @@ class TaskService {
         // 如果出错，忽略继续
       }
     }
-    
+
     if (oldVersion < 6) {
       // 删除商品类型字段，创建新表并迁移数据
       try {
@@ -307,17 +307,17 @@ class TaskService {
             createdTime TEXT NOT NULL
           )
         ''');
-        
+
         // 复制现有数据（排除type字段）
         await db.execute('''
           INSERT INTO shop_items_temp (id, name, description, icon, price, effect, isLimited, limitedUntil, createdBy, createdTime)
           SELECT id, name, description, icon, price, effect, isLimited, limitedUntil, createdBy, createdTime
           FROM shop_items
         ''');
-        
+
         // 删除旧表
         await db.execute('DROP TABLE shop_items');
-        
+
         // 重命名新表
         await db.execute('ALTER TABLE shop_items_temp RENAME TO shop_items');
       } catch (e) {
@@ -325,47 +325,53 @@ class TaskService {
         // 如果出错，忽略继续
       }
     }
-    
+
     if (oldVersion < 7) {
       // 添加 isRepeatable 字段到 shop_items 表
       try {
-        await db.execute('ALTER TABLE shop_items ADD COLUMN isRepeatable INTEGER DEFAULT 1');
+        await db.execute(
+          'ALTER TABLE shop_items ADD COLUMN isRepeatable INTEGER DEFAULT 1',
+        );
       } catch (e) {
         print('Error adding isRepeatable column: $e');
         // 如果字段已存在，忽略错误
       }
     }
-    
+
     if (oldVersion < 8) {
       // 添加重复任务相关字段到 tasks 表
       try {
-        await db.execute('ALTER TABLE tasks ADD COLUMN repeatType TEXT DEFAULT \'special\'');
+        await db.execute(
+          'ALTER TABLE tasks ADD COLUMN repeatType TEXT DEFAULT \'special\'',
+        );
       } catch (e) {
         print('Error adding repeatType column: $e');
       }
-      
+
       try {
         await db.execute('ALTER TABLE tasks ADD COLUMN lastCompletedDate TEXT');
       } catch (e) {
         print('Error adding lastCompletedDate column: $e');
       }
-      
+
       try {
         await db.execute('ALTER TABLE tasks ADD COLUMN originalTaskId TEXT');
       } catch (e) {
         print('Error adding originalTaskId column: $e');
       }
     }
-    
+
     if (oldVersion < 9) {
       // 添加难度字段到 tasks 表
       try {
-        await db.execute('ALTER TABLE tasks ADD COLUMN difficulty TEXT DEFAULT \'medium\'');
+        await db.execute(
+          'ALTER TABLE tasks ADD COLUMN difficulty TEXT DEFAULT \'medium\'',
+        );
       } catch (e) {
         print('Error adding difficulty column: $e');
       }
     }
-    
+
     if (oldVersion < 10) {
       // 创建成就表
       try {
@@ -393,26 +399,32 @@ class TaskService {
         print('Error creating achievements table: $e');
       }
     }
-    
+
     if (oldVersion < 11) {
       // 添加targetDifficulty字段到achievements表
       try {
-        await db.execute('ALTER TABLE achievements ADD COLUMN targetDifficulty TEXT');
+        await db.execute(
+          'ALTER TABLE achievements ADD COLUMN targetDifficulty TEXT',
+        );
       } catch (e) {
         print('Error adding targetDifficulty column: $e');
       }
     }
-    
+
     if (oldVersion < 12) {
       // 添加targetTaskId和targetTaskTitle字段到achievements表
       try {
-        await db.execute('ALTER TABLE achievements ADD COLUMN targetTaskId TEXT');
+        await db.execute(
+          'ALTER TABLE achievements ADD COLUMN targetTaskId TEXT',
+        );
       } catch (e) {
         print('Error adding targetTaskId column: $e');
       }
-      
+
       try {
-        await db.execute('ALTER TABLE achievements ADD COLUMN targetTaskTitle TEXT');
+        await db.execute(
+          'ALTER TABLE achievements ADD COLUMN targetTaskTitle TEXT',
+        );
       } catch (e) {
         print('Error adding targetTaskTitle column: $e');
       }
@@ -453,6 +465,31 @@ class TaskService {
     }
   }
 
+  // 根据ID获取单个任务
+  Future<Task?> getTaskById(String id) async {
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'tasks',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (maps.isEmpty) {
+        return null;
+      }
+      try {
+        return Task.fromMap(maps.first);
+      } catch (e) {
+        print('Error parsing task with id $id: $e');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting task by id: $e');
+      return null;
+    }
+  }
+
   // 更新任务
   Future<void> updateTask(Task task) async {
     try {
@@ -473,11 +510,7 @@ class TaskService {
   Future<void> deleteTask(String id) async {
     try {
       final db = await database;
-      await db.delete(
-        'tasks',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
     } catch (e) {
       print('Error deleting task from database: $e');
       rethrow;
@@ -485,7 +518,7 @@ class TaskService {
   }
 
   // === 职业相关操作 ===
-  
+
   // 添加职业
   Future<void> addProfession(Profession profession) async {
     final db = await database;
@@ -537,11 +570,7 @@ class TaskService {
       whereArgs: [id],
     );
     // 删除职业
-    await db.delete(
-      'professions',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('professions', where: 'id = ?', whereArgs: [id]);
   }
 
   // 根据职业ID获取相关任务
@@ -556,7 +585,7 @@ class TaskService {
   }
 
   // === 商店相关操作 ===
-  
+
   // 保存购买记录
   Future<void> savePurchaseRecord(Map<String, dynamic> record) async {
     final db = await database;
@@ -570,7 +599,11 @@ class TaskService {
   // 获取购买历史
   Future<List<Map<String, dynamic>>> getPurchaseHistory() async {
     final db = await database;
-    return await db.query('purchase_records', where: 'userId = ?', whereArgs: ['current_user']);
+    return await db.query(
+      'purchase_records',
+      where: 'userId = ?',
+      whereArgs: ['current_user'],
+    );
   }
 
   // 更新购买记录
@@ -587,22 +620,22 @@ class TaskService {
   // 添加到用户库存
   Future<void> addToInventory(Map<String, dynamic> item) async {
     final db = await database;
-    await db.insert(
-      'user_inventory',
-      {
-        'id': DateTime.now().millisecondsSinceEpoch.toString(),
-        'userId': 'current_user',
-        'itemData': jsonEncode(item),
-        'acquiredTime': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('user_inventory', {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'userId': 'current_user',
+      'itemData': jsonEncode(item),
+      'acquiredTime': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   // 获取用户库存
   Future<List<Map<String, dynamic>>> getUserInventory() async {
     final db = await database;
-    final records = await db.query('user_inventory', where: 'userId = ?', whereArgs: ['current_user']);
+    final records = await db.query(
+      'user_inventory',
+      where: 'userId = ?',
+      whereArgs: ['current_user'],
+    );
     return records.map((record) {
       return jsonDecode(record['itemData'] as String) as Map<String, dynamic>;
     }).toList();
@@ -611,14 +644,19 @@ class TaskService {
   // 保存激活的增益
   Future<void> saveActiveBoosts(Map<String, DateTime> boosts) async {
     final db = await database;
-    
+
     // 先清除现有的增益
-    await db.delete('active_boosts', where: 'userId = ?', whereArgs: ['current_user']);
-    
+    await db.delete(
+      'active_boosts',
+      where: 'userId = ?',
+      whereArgs: ['current_user'],
+    );
+
     // 添加新的增益
     for (final entry in boosts.entries) {
       await db.insert('active_boosts', {
-        'id': DateTime.now().millisecondsSinceEpoch.toString() + '_' + entry.key,
+        'id':
+            DateTime.now().millisecondsSinceEpoch.toString() + '_' + entry.key,
         'userId': 'current_user',
         'boostType': entry.key,
         'expiryTime': entry.value.toIso8601String(),
@@ -629,8 +667,12 @@ class TaskService {
   // 获取激活的增益
   Future<Map<String, dynamic>> getActiveBoosts() async {
     final db = await database;
-    final records = await db.query('active_boosts', where: 'userId = ?', whereArgs: ['current_user']);
-    
+    final records = await db.query(
+      'active_boosts',
+      where: 'userId = ?',
+      whereArgs: ['current_user'],
+    );
+
     final Map<String, dynamic> boosts = {};
     for (final record in records) {
       boosts[record['boostType'] as String] = record['expiryTime'] as String;
@@ -639,22 +681,22 @@ class TaskService {
   }
 
   // === 商店商品管理 ===
-  
+
   // 添加商店商品
   Future<void> addShopItem(Map<String, dynamic> item) async {
     final db = await database;
-    
+
     // 将effect map转换为JSON字符串
     final itemData = Map<String, dynamic>.from(item);
     itemData['effect'] = jsonEncode(item['effect'] ?? {});
     itemData['createdTime'] = DateTime.now().toIso8601String();
-    
+
     await db.insert(
       'shop_items',
       itemData,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    
+
     print('Shop item saved to database: ${item['name']}');
   }
 
@@ -662,7 +704,7 @@ class TaskService {
   Future<List<Map<String, dynamic>>> getShopItems() async {
     final db = await database;
     final records = await db.query('shop_items');
-    
+
     return records.map((record) {
       final item = Map<String, dynamic>.from(record);
       // 将JSON字符串转换回map
@@ -678,10 +720,10 @@ class TaskService {
   // 更新商店商品
   Future<void> updateShopItem(Map<String, dynamic> item) async {
     final db = await database;
-    
+
     final itemData = Map<String, dynamic>.from(item);
     itemData['effect'] = jsonEncode(item['effect'] ?? {});
-    
+
     await db.update(
       'shop_items',
       itemData,
@@ -693,15 +735,11 @@ class TaskService {
   // 删除商店商品
   Future<void> deleteShopItem(String itemId) async {
     final db = await database;
-    await db.delete(
-      'shop_items',
-      where: 'id = ?',
-      whereArgs: [itemId],
-    );
+    await db.delete('shop_items', where: 'id = ?', whereArgs: [itemId]);
   }
 
   // === 成就系统相关操作 ===
-  
+
   // 添加成就
   Future<void> addAchievement(Achievement achievement) async {
     final db = await database;
@@ -718,13 +756,16 @@ class TaskService {
       final db = await database;
       final List<Map<String, dynamic>> maps = await db.query('achievements');
       return List.generate(maps.length, (i) {
-        try {
-          return Achievement.fromMap(maps[i]);
-        } catch (e) {
-          print('Error parsing achievement at index $i: $e');
-          return null;
-        }
-      }).where((achievement) => achievement != null).cast<Achievement>().toList();
+            try {
+              return Achievement.fromMap(maps[i]);
+            } catch (e) {
+              print('Error parsing achievement at index $i: $e');
+              return null;
+            }
+          })
+          .where((achievement) => achievement != null)
+          .cast<Achievement>()
+          .toList();
     } catch (e) {
       print('Error getting achievements: $e');
       return [];
@@ -745,15 +786,13 @@ class TaskService {
   // 删除成就
   Future<void> deleteAchievement(String id) async {
     final db = await database;
-    await db.delete(
-      'achievements',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('achievements', where: 'id = ?', whereArgs: [id]);
   }
 
   // 根据职业获取成就
-  Future<List<Achievement>> getAchievementsByProfession(String? professionId) async {
+  Future<List<Achievement>> getAchievementsByProfession(
+    String? professionId,
+  ) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'achievements',

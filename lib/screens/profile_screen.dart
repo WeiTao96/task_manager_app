@@ -14,7 +14,8 @@ class ProfileScreen extends StatefulWidget {
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with TickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -31,20 +32,25 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   Future<void> _loadData() async {
-    final achievementProvider = Provider.of<AchievementProvider>(context, listen: false);
+    final achievementProvider = Provider.of<AchievementProvider>(
+      context,
+      listen: false,
+    );
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    
+
     await achievementProvider.loadAchievements();
-    
+
     // 更新成就进度
-    final completedTasks = taskProvider.tasks.where((t) => t.isCompleted).toList();
+    final completedTasks = taskProvider.tasks
+        .where((t) => t.isCompleted)
+        .toList();
     final difficultyTaskCounts = <TaskDifficulty, int>{};
-    
+
     for (final task in completedTasks) {
-      difficultyTaskCounts[task.difficulty] = 
+      difficultyTaskCounts[task.difficulty] =
           (difficultyTaskCounts[task.difficulty] ?? 0) + 1;
     }
-    
+
     await achievementProvider.checkAchievements(
       completedTasks: completedTasks,
       totalExperience: taskProvider.totalExp,
@@ -64,7 +70,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           IconButton(
             icon: Icon(Icons.settings),
             onPressed: () {
-              Navigator.pushNamed(context, AchievementManagementScreen.routeName);
+              Navigator.pushNamed(
+                context,
+                AchievementManagementScreen.routeName,
+              );
             },
             tooltip: '成就管理',
           ),
@@ -94,182 +103,196 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Widget _buildOverviewTab() {
     return Consumer3<TaskProvider, ProfessionProvider, AchievementProvider>(
-      builder: (context, taskProvider, professionProvider, achievementProvider, child) {
-        final stats = achievementProvider.getAchievementStats();
-        final recentAchievements = achievementProvider.getRecentlyUnlocked(limit: 3);
-        
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 用户头像和基本信息
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.indigo, Colors.indigoAccent],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      builder:
+          (
+            context,
+            taskProvider,
+            professionProvider,
+            achievementProvider,
+            child,
+          ) {
+            final stats = achievementProvider.getAchievementStats();
+            final recentAchievements = achievementProvider.getRecentlyUnlocked(
+              limit: 3,
+            );
+
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 用户头像和基本信息
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.indigo, Colors.indigoAccent],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.white,
+                          child: Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Colors.indigo,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          '成长探索者',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          taskProvider.tasks.isNotEmpty
+                              ? '已创建 ${taskProvider.tasks.length} 个任务'
+                              : '开始你的任务管理之旅',
+                          style: TextStyle(fontSize: 16, color: Colors.white70),
+                        ),
+                      ],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.indigo,
+
+                  SizedBox(height: 24),
+
+                  // 快速统计卡片
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatsCard(
+                          title: '总经验',
+                          value: taskProvider.totalExp.toString(),
+                          icon: Icons.star,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatsCard(
+                          title: '总金币',
+                          value: taskProvider.totalGold.toString(),
+                          icon: Icons.monetization_on,
+                          color: Colors.yellow[700]!,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatsCard(
+                          title: '完成任务',
+                          value: taskProvider.tasks
+                              .where((t) => t.isCompleted)
+                              .length
+                              .toString(),
+                          icon: Icons.check_circle,
+                          color: Colors.green,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatsCard(
+                          title: '解锁成就',
+                          value: '${stats['unlocked']}/${stats['total']}',
+                          icon: Icons.emoji_events,
+                          color: Colors.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 24),
+
+                  // 最近解锁的成就
+                  if (recentAchievements.isNotEmpty) ...[
+                    Text(
+                      '最近解锁的成就',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 16),
-                    Text(
-                      '成长探索者',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    ...recentAchievements.map(
+                      (achievement) => AchievementCard(
+                        achievement: achievement,
+                        isCompact: true,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: 16),
+                  ],
+
+                  // 职业概览
+                  if (professionProvider.professions.isNotEmpty) ...[
                     Text(
-                      taskProvider.tasks.isNotEmpty 
-                        ? '已创建 ${taskProvider.tasks.length} 个任务'
-                        : '开始你的任务管理之旅',
+                      '职业概览',
                       style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Container(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: professionProvider.professions.length,
+                        itemBuilder: (context, index) {
+                          final profession =
+                              professionProvider.professions[index];
+                          return Container(
+                            width: 100,
+                            margin: EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  profession.icon,
+                                  style: TextStyle(fontSize: 32),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  profession.name,
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                                Text(
+                                  'Lv.${profession.level}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
-                ),
-              ),
-
-              SizedBox(height: 24),
-
-              // 快速统计卡片
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatsCard(
-                      title: '总经验',
-                      value: taskProvider.totalExp.toString(),
-                      icon: Icons.star,
-                      color: Colors.amber,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatsCard(
-                      title: '总金币',
-                      value: taskProvider.totalGold.toString(),
-                      icon: Icons.monetization_on,
-                      color: Colors.yellow[700]!,
-                    ),
-                  ),
                 ],
               ),
-
-              SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatsCard(
-                      title: '完成任务',
-                      value: taskProvider.tasks.where((t) => t.isCompleted).length.toString(),
-                      icon: Icons.check_circle,
-                      color: Colors.green,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatsCard(
-                      title: '解锁成就',
-                      value: '${stats['unlocked']}/${stats['total']}',
-                      icon: Icons.emoji_events,
-                      color: Colors.purple,
-                    ),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: 24),
-
-              // 最近解锁的成就
-              if (recentAchievements.isNotEmpty) ...[
-                Text(
-                  '最近解锁的成就',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 16),
-                ...recentAchievements.map((achievement) => 
-                  AchievementCard(achievement: achievement, isCompact: true)),
-                SizedBox(height: 16),
-              ],
-
-              // 职业概览
-              if (professionProvider.professions.isNotEmpty) ...[
-                Text(
-                  '职业概览',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 16),
-                Container(
-                  height: 120,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: professionProvider.professions.length,
-                    itemBuilder: (context, index) {
-                      final profession = professionProvider.professions[index];
-                      return Container(
-                        width: 100,
-                        margin: EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              profession.icon,
-                              style: TextStyle(fontSize: 32),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              profession.name,
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            ),
-                            Text(
-                              'Lv.${profession.level}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
+            );
+          },
     );
   }
 
@@ -298,13 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               color: color,
             ),
           ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         ],
       ),
     );
@@ -314,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     return Consumer<AchievementProvider>(
       builder: (context, achievementProvider, child) {
         final achievements = achievementProvider.achievements;
-        
+
         if (achievements.isEmpty) {
           return Center(
             child: Column(
@@ -346,13 +363,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   Widget _buildStatisticsTab() {
     return Consumer3<TaskProvider, ProfessionProvider, AchievementProvider>(
       builder: (context, taskProvider, professionProvider, achievementProvider, child) {
-        final completedTasks = taskProvider.tasks.where((t) => t.isCompleted).toList();
+        final completedTasks = taskProvider.tasks
+            .where((t) => t.isCompleted)
+            .toList();
         final achievementStats = achievementProvider.getAchievementStats();
-        
+
         // 按难度统计任务
         final difficultyStats = <TaskDifficulty, int>{};
         for (final task in completedTasks) {
-          difficultyStats[task.difficulty] = (difficultyStats[task.difficulty] ?? 0) + 1;
+          difficultyStats[task.difficulty] =
+              (difficultyStats[task.difficulty] ?? 0) + 1;
         }
 
         // 按类型统计任务
@@ -372,7 +392,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 children: [
                   _buildStatisticItem('总成就数', '${achievementStats['total']}'),
                   _buildStatisticItem('已解锁', '${achievementStats['unlocked']}'),
-                  _buildStatisticItem('完成率', '${achievementStats['completion_rate']}%'),
+                  _buildStatisticItem(
+                    '完成率',
+                    '${achievementStats['completion_rate']}%',
+                  ),
                   _buildStatisticItem('自定义成就', '${achievementStats['custom']}'),
                 ],
               ),
@@ -383,9 +406,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 children: [
                   _buildStatisticItem('总任务数', '${taskProvider.tasks.length}'),
                   _buildStatisticItem('已完成', '${completedTasks.length}'),
-                  _buildStatisticItem('进行中', '${taskProvider.tasks.length - completedTasks.length}'),
-                  _buildStatisticItem('完成率', taskProvider.tasks.isNotEmpty ? 
-                    '${((completedTasks.length / taskProvider.tasks.length) * 100).round()}%' : '0%'),
+                  _buildStatisticItem(
+                    '进行中',
+                    '${taskProvider.tasks.length - completedTasks.length}',
+                  ),
+                  _buildStatisticItem(
+                    '完成率',
+                    taskProvider.tasks.isNotEmpty
+                        ? '${((completedTasks.length / taskProvider.tasks.length) * 100).round()}%'
+                        : '0%',
+                  ),
                 ],
               ),
 
@@ -415,9 +445,22 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               _buildStatisticsSection(
                 title: '任务类型分布',
                 children: [
-                  _buildStatisticItem('特殊任务', '${typeStats[TaskRepeatType.special] ?? 0}'),
-                  _buildStatisticItem('每日任务', '${typeStats[TaskRepeatType.daily] ?? 0}'),
-                  _buildStatisticItem('每周任务', '${typeStats[TaskRepeatType.weekly] ?? 0}'),
+                  _buildStatisticItem(
+                    '特殊任务',
+                    '${typeStats[TaskRepeatType.special] ?? 0}',
+                  ),
+                  _buildStatisticItem(
+                    '每日任务',
+                    '${typeStats[TaskRepeatType.daily] ?? 0}',
+                  ),
+                  _buildStatisticItem(
+                    '每周任务',
+                    '${typeStats[TaskRepeatType.weekly] ?? 0}',
+                  ),
+                  _buildStatisticItem(
+                    '每月任务',
+                    '${typeStats[TaskRepeatType.monthly] ?? 0}',
+                  ),
                 ],
               ),
 
@@ -427,10 +470,18 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 children: [
                   _buildStatisticItem('总经验值', '${taskProvider.totalExp}'),
                   _buildStatisticItem('总金币', '${taskProvider.totalGold}'),
-                  _buildStatisticItem('平均经验/任务', completedTasks.isNotEmpty ? 
-                    '${(taskProvider.totalExp / completedTasks.length).round()}' : '0'),
-                  _buildStatisticItem('平均金币/任务', completedTasks.isNotEmpty ? 
-                    '${(taskProvider.totalGold / completedTasks.length).round()}' : '0'),
+                  _buildStatisticItem(
+                    '平均经验/任务',
+                    completedTasks.isNotEmpty
+                        ? '${(taskProvider.totalExp / completedTasks.length).round()}'
+                        : '0',
+                  ),
+                  _buildStatisticItem(
+                    '平均金币/任务',
+                    completedTasks.isNotEmpty
+                        ? '${(taskProvider.totalGold / completedTasks.length).round()}'
+                        : '0',
+                  ),
                 ],
               ),
             ],
@@ -477,10 +528,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(fontSize: 16),
-          ),
+          Text(label, style: TextStyle(fontSize: 16)),
           Text(
             value,
             style: TextStyle(

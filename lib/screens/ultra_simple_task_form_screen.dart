@@ -7,7 +7,8 @@ import '../models/task.dart';
 
 class UltraSimpleTaskFormScreen extends StatefulWidget {
   @override
-  _UltraSimpleTaskFormScreenState createState() => _UltraSimpleTaskFormScreenState();
+  _UltraSimpleTaskFormScreenState createState() =>
+      _UltraSimpleTaskFormScreenState();
 }
 
 class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
@@ -21,22 +22,27 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
   TaskDifficulty _selectedDifficulty = TaskDifficulty.medium;
   bool _isLoading = false;
   List<String> _professionNames = ['默认'];
-  
+
   @override
   void initState() {
     super.initState();
     _loadProfessions();
   }
-  
+
   void _loadProfessions() async {
     try {
-      final professionProvider = Provider.of<ProfessionProvider>(context, listen: false);
+      final professionProvider = Provider.of<ProfessionProvider>(
+        context,
+        listen: false,
+      );
       await professionProvider.loadProfessions();
-      
+
       if (mounted) {
         setState(() {
           if (professionProvider.professions.isNotEmpty) {
-            _professionNames = professionProvider.professions.map((p) => p.name).toList();
+            _professionNames = professionProvider.professions
+                .map((p) => p.name)
+                .toList();
             _selectedCategory = _professionNames.first;
           }
         });
@@ -45,7 +51,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
       print('Error loading professions: $e');
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,7 +73,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                 hint: '请输入任务标题',
                 onChanged: (value) => setState(() => _title = value),
               ),
-              
+
               // 任务描述
               _buildInputSection(
                 title: '任务描述',
@@ -76,7 +82,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                 onChanged: (value) => setState(() => _description = value),
                 maxLines: 3,
               ),
-              
+
               // 职业选择
               _buildSection(
                 title: '选择职业',
@@ -102,7 +108,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                   ),
                 ),
               ),
-              
+
               // 任务类型选择
               _buildSection(
                 title: '任务类型',
@@ -133,7 +139,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                   ),
                 ),
               ),
-              
+
               // 任务难度选择
               _buildSection(
                 title: '任务难度',
@@ -164,7 +170,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                   ),
                 ),
               ),
-              
+
               // 截止日期
               _buildSection(
                 title: '截止日期',
@@ -191,7 +197,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                   ),
                 ),
               ),
-              
+
               // 奖励设置
               _buildSection(
                 title: '任务奖励',
@@ -219,9 +225,9 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                   ],
                 ),
               ),
-              
+
               SizedBox(height: 32),
-              
+
               // 保存按钮
               GestureDetector(
                 onTap: _isLoading ? null : _saveTask,
@@ -233,23 +239,25 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
-                    child: _isLoading 
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    child: _isLoading
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            '保存任务',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        )
-                      : Text(
-                          '保存任务',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                   ),
                 ),
               ),
@@ -259,7 +267,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
       ),
     );
   }
-  
+
   Widget _buildSection({required String title, required Widget child}) {
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -280,7 +288,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
       ),
     );
   }
-  
+
   Widget _buildInputSection({
     required String title,
     required String value,
@@ -324,7 +332,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
       ),
     );
   }
-  
+
   void _showProfessionPicker() {
     showDialog(
       context: context,
@@ -340,7 +348,9 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                 final profession = _professionNames[index];
                 return ListTile(
                   title: Text(profession),
-                  trailing: _selectedCategory == profession ? Icon(Icons.check, color: Colors.blue) : null,
+                  trailing: _selectedCategory == profession
+                      ? Icon(Icons.check, color: Colors.blue)
+                      : null,
                   onTap: () {
                     setState(() {
                       _selectedCategory = profession;
@@ -361,11 +371,11 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
       },
     );
   }
-  
+
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
-  
+
   Future<void> _selectDate() async {
     try {
       final DateTime? picked = await showDatePicker(
@@ -383,26 +393,23 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
       print('Error selecting date: $e');
     }
   }
-  
+
   Future<void> _saveTask() async {
     // 基本验证
     if (_title.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('请输入任务标题'),
-          backgroundColor: Colors.orange,
-        ),
+        SnackBar(content: Text('请输入任务标题'), backgroundColor: Colors.orange),
       );
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      
+
       final newTask = Task(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: _title.trim(),
@@ -414,9 +421,9 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
         repeatType: _selectedRepeatType,
         difficulty: _selectedDifficulty,
       );
-      
+
       await taskProvider.addTask(newTask);
-      
+
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -429,10 +436,7 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存失败：$e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('保存失败：$e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -465,9 +469,9 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                   ),
                   title: Text(difficulty.displayName),
                   subtitle: Text(_getDifficultyDescription(difficulty)),
-                  trailing: _selectedDifficulty == difficulty 
-                    ? Icon(Icons.check, color: Colors.blue) 
-                    : null,
+                  trailing: _selectedDifficulty == difficulty
+                      ? Icon(Icons.check, color: Colors.blue)
+                      : null,
                   onTap: () {
                     setState(() {
                       _selectedDifficulty = difficulty;
@@ -534,9 +538,9 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
                   ),
                   title: Text(type.displayName),
                   subtitle: Text(_getRepeatTypeDescription(type)),
-                  trailing: _selectedRepeatType == type 
-                    ? Icon(Icons.check, color: Colors.blue) 
-                    : null,
+                  trailing: _selectedRepeatType == type
+                      ? Icon(Icons.check, color: Colors.blue)
+                      : null,
                   onTap: () {
                     setState(() {
                       _selectedRepeatType = type;
@@ -567,6 +571,8 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
         return Icons.today;
       case TaskRepeatType.weekly:
         return Icons.date_range;
+      case TaskRepeatType.monthly:
+        return Icons.calendar_month;
       case TaskRepeatType.special:
         return Icons.star;
     }
@@ -579,6 +585,8 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
         return Colors.orange;
       case TaskRepeatType.weekly:
         return Colors.blue;
+      case TaskRepeatType.monthly:
+        return Colors.indigo;
       case TaskRepeatType.special:
         return Colors.purple;
     }
@@ -591,6 +599,8 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
         return '每天重复，需要当天完成';
       case TaskRepeatType.weekly:
         return '每周重复，需要本周内完成';
+      case TaskRepeatType.monthly:
+        return '每月重复，需要当月内完成';
       case TaskRepeatType.special:
         return '一次性任务，无重复要求';
     }
@@ -608,7 +618,26 @@ class _UltraSimpleTaskFormScreenState extends State<UltraSimpleTaskFormScreen> {
         // 每周任务设置为本周日结束
         final daysUntilSunday = 7 - now.weekday;
         final nextSunday = now.add(Duration(days: daysUntilSunday));
-        _dueDate = DateTime(nextSunday.year, nextSunday.month, nextSunday.day, 23, 59, 59);
+        _dueDate = DateTime(
+          nextSunday.year,
+          nextSunday.month,
+          nextSunday.day,
+          23,
+          59,
+          59,
+        );
+        break;
+      case TaskRepeatType.monthly:
+        // 每月任务设置为本月最后一天结束
+        final endOfMonth = DateTime(now.year, now.month + 1, 0);
+        _dueDate = DateTime(
+          endOfMonth.year,
+          endOfMonth.month,
+          endOfMonth.day,
+          23,
+          59,
+          59,
+        );
         break;
       case TaskRepeatType.special:
         // 特殊任务保持用户选择的日期，或默认明天

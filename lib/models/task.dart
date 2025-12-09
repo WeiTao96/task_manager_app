@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 // 任务重复类型枚举
 enum TaskRepeatType {
   special('特殊任务'),
-  daily('每日任务'), 
-  weekly('每周任务');
+  daily('每日任务'),
+  weekly('每周任务'),
+  monthly('每月任务');
 
   const TaskRepeatType(this.displayName);
   final String displayName;
@@ -18,7 +19,7 @@ enum TaskDifficulty {
 
   const TaskDifficulty(this.displayName);
   final String displayName;
-  
+
   // 获取难度对应的颜色
   Color get color {
     switch (this) {
@@ -79,7 +80,7 @@ class Task {
     };
   }
 
-    // 从Map创建Task对象
+  // 从Map创建Task对象
   factory Task.fromMap(Map<String, dynamic> map) {
     // 解析重复类型
     TaskRepeatType repeatType = TaskRepeatType.special;
@@ -115,12 +116,14 @@ class Task {
       dueDate: DateTime.parse(map['dueDate']),
       category: map['category'],
       xp: map.containsKey('xp') && map['xp'] != null ? (map['xp'] as int) : 0,
-      gold: map.containsKey('gold') && map['gold'] != null ? (map['gold'] as int) : 0,
+      gold: map.containsKey('gold') && map['gold'] != null
+          ? (map['gold'] as int)
+          : 0,
       repeatType: repeatType,
       difficulty: difficulty,
-      lastCompletedDate: map['lastCompletedDate'] != null 
-        ? DateTime.parse(map['lastCompletedDate']) 
-        : null,
+      lastCompletedDate: map['lastCompletedDate'] != null
+          ? DateTime.parse(map['lastCompletedDate'])
+          : null,
       originalTaskId: map['originalTaskId'],
     );
   }

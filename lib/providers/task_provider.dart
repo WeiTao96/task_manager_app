@@ -15,17 +15,28 @@ class TaskProvider with ChangeNotifier {
   int _spentGold = 0; // 非持久化：记录已消费的金币，用于在商店购买时减少显示的金币
 
   List<Task> get tasks {
+    final visibleTasks = _tasks.where((task) {
+      final isRepeatTemplate =
+          task.originalTaskId == null &&
+          (task.repeatType == TaskRepeatType.daily ||
+              task.repeatType == TaskRepeatType.weekly ||
+              task.repeatType == TaskRepeatType.monthly);
+      return !isRepeatTemplate;
+    });
+
     switch (_filter) {
       case 'completed':
-        return _tasks.where((task) => task.isCompleted).toList();
+        return visibleTasks.where((task) => task.isCompleted).toList();
       case 'pending':
-        return _tasks.where((task) => !task.isCompleted).toList();
+        return visibleTasks.where((task) => !task.isCompleted).toList();
       default:
         if (_filter.startsWith('category:')) {
           final category = _filter.substring(9); // 移除 'category:' 前缀
-          return _tasks.where((task) => task.category == category).toList();
+          return visibleTasks
+              .where((task) => task.category == category)
+              .toList();
         }
-        return _tasks;
+        return visibleTasks.toList();
     }
   }
 
@@ -138,6 +149,9 @@ class TaskProvider with ChangeNotifier {
 
       // 处理每周任务
       await _generateWeeklyTasks(today);
+
+      // 处理每月任务
+      await _generateMonthlyTasks(today);
 
       // 清理过期的重复任务
       await _cleanupExpiredRepeatTasks(today);
@@ -260,6 +274,54 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
+  // 生成每月任务
+  Future<void> _generateMonthlyTasks(DateTime today) async {
+    try {
+      final monthlyTemplates = _tasks
+          .where(
+            (task) =>
+                task.repeatType == TaskRepeatType.monthly &&
+                task.originalTaskId == null,
+          )
+          .toList();
+
+      for (final template in monthlyTemplates) {
+        final hasThisMonth = _tasks.any(
+          (task) =>
+              task.originalTaskId == template.id &&
+              _isSameMonth(task.dueDate, today),
+        );
+
+        final generatedThisMonth =
+            template.lastCompletedDate != null &&
+            _isSameMonth(template.lastCompletedDate!, today);
+
+        if (!hasThisMonth && !generatedThisMonth) {
+          final dueDate = _alignMonthlyDueDate(template.dueDate, today);
+          final monthlyTask = Task(
+            id: '${template.id}_month_${today.year}_${today.month}',
+            title: template.title,
+            description: template.description,
+            dueDate: dueDate,
+            category: template.category,
+            xp: template.xp,
+            gold: template.gold,
+            repeatType: TaskRepeatType.monthly,
+            difficulty: template.difficulty,
+            originalTaskId: template.id,
+          );
+
+          await _taskService.addTask(monthlyTask);
+          _tasks.add(monthlyTask);
+
+          await _updateTemplateGenerationInfo(template.id, monthlyTask.dueDate);
+        }
+      }
+    } catch (e) {
+      print('Error generating monthly tasks: $e');
+    }
+  }
+
   // 清理过期的重复任务
   Future<void> _cleanupExpiredRepeatTasks(DateTime today) async {
     try {
@@ -278,6 +340,12 @@ class TaskProvider with ChangeNotifier {
           } else if (task.repeatType == TaskRepeatType.weekly) {
             // 清理上周及之前的未完成每周任务
             if (!_isInSameWeek(task.dueDate, today) &&
+                task.dueDate.isBefore(today) &&
+                !task.isCompleted) {
+              shouldRemove = true;
+            }
+          } else if (task.repeatType == TaskRepeatType.monthly) {
+            if (!_isSameMonth(task.dueDate, today) &&
                 task.dueDate.isBefore(today) &&
                 !task.isCompleted) {
               shouldRemove = true;
@@ -318,9 +386,34 @@ class TaskProvider with ChangeNotifier {
     return _isSameDay(startOfWeek1, startOfWeek2);
   }
 
+  bool _isSameMonth(DateTime date1, DateTime date2) {
+    return date1.year == date2.year && date1.month == date2.month;
+  }
+
   DateTime _startOfWeek(DateTime date) {
     final normalized = DateTime(date.year, date.month, date.day);
     return normalized.subtract(Duration(days: normalized.weekday - 1));
+  }
+
+  int _daysInMonth(int year, int month) {
+    final lastDay = DateTime(year, month + 1, 0);
+    return lastDay.day;
+  }
+
+  DateTime _alignMonthlyDueDate(
+    DateTime templateDueDate,
+    DateTime referenceDate,
+  ) {
+    final daysInMonth = _daysInMonth(referenceDate.year, referenceDate.month);
+    final day = templateDueDate.day.clamp(1, daysInMonth).toInt();
+    return DateTime(
+      referenceDate.year,
+      referenceDate.month,
+      day,
+      templateDueDate.hour,
+      templateDueDate.minute,
+      templateDueDate.second,
+    );
   }
 
   Future<void> _handleRepeatTaskCompletion(Task task) async {
@@ -393,6 +486,38 @@ class TaskProvider with ChangeNotifier {
           xp: task.xp,
           gold: task.gold,
           repeatType: TaskRepeatType.weekly,
+          difficulty: task.difficulty,
+          originalTaskId: baseId,
+        );
+        await _taskService.addTask(nextTask);
+      }
+
+      await _updateTemplateGenerationInfo(baseId, nextDueDate);
+    } else if (task.repeatType == TaskRepeatType.monthly) {
+      final nextMonthReference = DateTime(
+        task.dueDate.year,
+        task.dueDate.month + 1,
+        1,
+      );
+      final nextDueDate = _alignMonthlyDueDate(
+        task.dueDate,
+        nextMonthReference,
+      );
+
+      final alreadyExists = _tasks.any(
+        (t) =>
+            t.originalTaskId == baseId && _isSameMonth(t.dueDate, nextDueDate),
+      );
+      if (!alreadyExists) {
+        final nextTask = Task(
+          id: '${baseId}_month_${nextDueDate.year}_${nextDueDate.month}',
+          title: task.title,
+          description: task.description,
+          dueDate: nextDueDate,
+          category: task.category,
+          xp: task.xp,
+          gold: task.gold,
+          repeatType: TaskRepeatType.monthly,
           difficulty: task.difficulty,
           originalTaskId: baseId,
         );
